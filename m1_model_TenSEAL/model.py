@@ -31,10 +31,10 @@ class CNN(torch.nn.Module):
     def __init__(self, hidden=64, output=10):
         super(CNN, self).__init__()
         # L1 Image shape=(?, 28, 28, 1)
-        #    Conv     -> (?, 8, 8, 4)
-        self.Conv1 = torch.nn.Conv2d(in_channels=1, out_channels=4, kernel_size=7, stride=3, padding=0)
-        self.FC1 = torch.nn.Linear(8 * 8 * 4, hidden)
-        self.FC2 = torch.nn.Linear(hidden, output)
+        #    Conv     -> (?, 9, 9, 8)
+        self.Conv1 = torch.nn.Conv2d(in_channels=1, out_channels=8, kernel_size=4, stride=3, padding=0)
+        self.FC1 = torch.nn.Linear(9 * 9 * 8, 64)
+        self.FC2 = torch.nn.Linear(64, 10)
 
     def forward(self, x):
         x = self.Conv1(x)
@@ -124,4 +124,4 @@ plt.xlim(-2,training_epochs+3)
 plt.show()
 
 print(model)
-torch.save(model.state_dict(), 'MNIST_LeNet.pth')
+torch.save(model.state_dict(), 'MNIST_test1.pth')
