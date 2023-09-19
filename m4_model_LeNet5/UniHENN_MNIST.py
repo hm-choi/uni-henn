@@ -79,17 +79,18 @@ model_cnn = torch.load('./MNIST_LeNet5.pth', map_location=torch.device('cpu'))
 # print(model_cnn)
 
 conv2d_client = CNN()
-conv2d_client.Conv1.weight.data = model_cnn['Conv1.weight']
-conv2d_client.Conv1.bias.data = model_cnn['Conv1.bias']
-conv2d_client.Conv2.weight.data = model_cnn['Conv2.weight']
-conv2d_client.Conv2.bias.data = model_cnn['Conv2.bias']
-conv2d_client.Conv3.weight.data = model_cnn['Conv3.weight']
-conv2d_client.Conv3.bias.data = model_cnn['Conv3.bias']
+conv2d_client.load_state_dict(model_cnn)
+# conv2d_client.Conv1.weight.data = model_cnn['Conv1.weight']
+# conv2d_client.Conv1.bias.data = model_cnn['Conv1.bias']
+# conv2d_client.Conv2.weight.data = model_cnn['Conv2.weight']
+# conv2d_client.Conv2.bias.data = model_cnn['Conv2.bias']
+# conv2d_client.Conv3.weight.data = model_cnn['Conv3.weight']
+# conv2d_client.Conv3.bias.data = model_cnn['Conv3.bias']
 
-conv2d_client.FC1.weight.data = model_cnn['FC1.weight']
-conv2d_client.FC1.bias.data = model_cnn['FC1.bias']
-conv2d_client.FC2.weight.data = model_cnn['FC2.weight']
-conv2d_client.FC2.bias.data = model_cnn['FC2.bias']
+# conv2d_client.FC1.weight.data = model_cnn['FC1.weight']
+# conv2d_client.FC1.bias.data = model_cnn['FC1.bias']
+# conv2d_client.FC2.weight.data = model_cnn['FC2.weight']
+# conv2d_client.FC2.bias.data = model_cnn['FC2.bias']
 
 csps_conv_weights, csps_conv_biases, csps_fc_weights, csps_fc_biases = [], [], [], []
 csps_conv_weights.append(model_cnn['Conv1.weight'])
@@ -141,12 +142,19 @@ def enc_test(evaluator, ckks_encoder, galois_key, relin_keys, csps_ctxt, csps_co
     global originals
     global hes
     global real_labels
+    global depth_time
 
     START_TIME = time.time()
-    result, OH, S, const_param = conv2d_layer_converter_(evaluator, ckks_encoder, galois_key, relin_keys, [csps_ctxt], csps_conv_weights[0], csps_conv_biases[0], input_size=image_size, real_input_size=image_size, padding=paddings[0], stride=strides[0], data_size=data_size, const_param =1)
+
+    result = re_depth(ckks_encoder, evaluator, relin_keys, [csps_ctxt], 2)
+    DEPTH_TIME = time.time()
+    print('DEPTH TIME', DEPTH_TIME - START_TIME)
+    depth_time.append(DEPTH_TIME - START_TIME)
+
+    result, OH, S, const_param = conv2d_layer_converter_(evaluator, ckks_encoder, galois_key, relin_keys, result, csps_conv_weights[0], csps_conv_biases[0], input_size=image_size, real_input_size=image_size, padding=paddings[0], stride=strides[0], data_size=data_size, const_param =1)
     CHECK_TIME1 = time.time()
-    print('CONV2D 1 TIME', CHECK_TIME1-START_TIME)
-    convs[0].append(CHECK_TIME1-START_TIME)
+    print('CONV2D 1 TIME', CHECK_TIME1-DEPTH_TIME)
+    convs[0].append(CHECK_TIME1-DEPTH_TIME)
 
     result, const_param = square(evaluator, relin_keys, result, const_param)
     CHECK_TIME2 = time.time()
@@ -185,7 +193,7 @@ def enc_test(evaluator, ckks_encoder, galois_key, relin_keys, csps_ctxt, csps_co
     print('SQ 3 TIME', CHECK_TIME8-CHECK_TIME7)
     sqs[2].append(CHECK_TIME8-CHECK_TIME7)
 
-    result = flatten(evaluator, ckks_encoder, galois_key, relin_keys, result, OH, S, input_size=image_size, data_size=data_size, const_param=const_param)
+    result = flatten(evaluator, ckks_encoder, galois_key, relin_keys, result, OH, OH, S, input_size=image_size, data_size=data_size, const_param=const_param)
     CHECK_TIME9 = time.time()
     print('FLATTEN TIME', CHECK_TIME9-CHECK_TIME8)
     flattens.append(CHECK_TIME9-CHECK_TIME8)
@@ -222,9 +230,9 @@ def enc_test(evaluator, ckks_encoder, galois_key, relin_keys, csps_ctxt, csps_co
         if max_data_idx == max_ctxt_idx:
             count_correct += 1
 
-    print('Test Accuracy (Overall): {0}% ({1}/{2})'.format(count_correct/num_of_data*100, count_correct, num_of_data))
+    # print('Test Accuracy (Overall): {0}% ({1}/{2})'.format(count_correct/num_of_data*100, count_correct, num_of_data))
     print('Total Time', END_TIME-START_TIME)
-    print()
+    # print()
     totals.append(END_TIME-START_TIME)
 
     for i in range(num_of_data):
@@ -244,12 +252,12 @@ def enc_test(evaluator, ckks_encoder, galois_key, relin_keys, csps_ctxt, csps_co
                 max_ctxt = ctxt_data
                 max_ctxt_idx = j
         
-        print(i+1, 'th result')
-        print("Error          |", sum)
-        print("original label |", max_data_idx)
-        print("HE label       |", max_ctxt_idx)
-        print("real label     |", label[i])
-        print("="*30)
+        # print(i+1, 'th result')
+        # print("Error          |", sum)
+        # print("original label |", max_data_idx)
+        # print("HE label       |", max_ctxt_idx)
+        # print("real label     |", label[i])
+        # print("="*30)
 
         errors[i].append(sum)
         originals[i].append(max_data_idx)
@@ -257,6 +265,7 @@ def enc_test(evaluator, ckks_encoder, galois_key, relin_keys, csps_ctxt, csps_co
         real_labels[i].append(label[i])
 
 labels = []
+depth_time = []
 convs = [[], [], []]
 sqs = [[], [], [], []]
 avgpools = [[], []]
@@ -293,6 +302,7 @@ for index in range(300):
     enc_test(evaluator, ckks_encoder, galois_key, relin_keys, csps_ctxt, csps_conv_weights, csps_conv_biases, image_size, paddings, strides, data_size, _label)
 
     df = pd.DataFrame(labels, columns=["label"])
+    df["DEPTH"] = depth_time
     df["CONV1"] = convs[0]
     df["SQ1"] = sqs[0]
     df["AvgPool1"] = avgpools[0]
@@ -318,4 +328,4 @@ for index in range(300):
         df[HE_name] = hes[i]
         df[real_name] = real_labels[i]
 
-    df.to_csv("MNIST_LeNet5.csv", index = False)
+    df.to_csv("MNIST_LeNet5_.csv", index = False)
