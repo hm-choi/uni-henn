@@ -9,7 +9,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 learning_rate = 0.001
 training_epochs = 15
-batch_size = 100
+batch_size = 32
 
 # MNIST 데이터셋 로드 및 전처리
 transform = transforms.Compose([

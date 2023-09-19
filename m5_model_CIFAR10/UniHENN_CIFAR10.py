@@ -13,14 +13,14 @@ poly_modulus_degree = 8192*2
 parms.set_poly_modulus_degree(poly_modulus_degree)
 bits_scale1 = 40
 bits_scale2 = 32
-coeff_mod_bit_sizes = [bits_scale1] + [bits_scale2]*9 + [bits_scale1]
+coeff_mod_bit_sizes = [bits_scale1] + [bits_scale2]*11 + [bits_scale1]
 parms.set_coeff_modulus(CoeffModulus.Create(poly_modulus_degree, coeff_mod_bit_sizes))
 
 scale = 2.0**bits_scale2
 context = SEALContext(parms)
 ckks_encoder = CKKSEncoder(context)
 slot_count = ckks_encoder.slot_count()
-print(f'Number of slots: {slot_count}') # 8192
+# print(f'Number of slots: {slot_count}') # 8192
  
 keygen = KeyGenerator(context)
 public_key = keygen.create_public_key()
@@ -118,8 +118,8 @@ csps_fc_biases.append(model_cnn['FC1.bias'])
 image_size = 32 # Suppose that image shape is sqaure
 image_height = 3
 data_size = 32*32 + 32 + 1
-# num_of_data = int((poly_modulus_degree/2)//data_size)
-num_of_data = 1
+num_of_data = int((poly_modulus_degree/2)//data_size)
+# num_of_data = 1
 print(num_of_data)
 
 transform = transforms.Compose([
@@ -140,12 +140,20 @@ def enc_test(evaluator, ckks_encoder, galois_key, relin_keys, ctxt_list, csps_co
     global errors
     global originals
     global hes
+    global real_labels
+    global depth_time
 
     START_TIME = time.time()
-    result, OH, S, const_param = conv2d_layer_converter_(evaluator, ckks_encoder, galois_key, relin_keys, ctxt_list, csps_conv_weights[0], csps_conv_biases[0], input_size=image_size, real_input_size=image_size, padding=paddings[0], stride=strides[0], data_size=data_size, const_param = 1)
+
+    result = re_depth(ckks_encoder, evaluator, relin_keys, ctxt_list, 3)
+    DEPTH_TIME = time.time()
+    print('DEPTH TIME', DEPTH_TIME - START_TIME)
+    depth_time.append(DEPTH_TIME - START_TIME)
+
+    result, OH, S, const_param = conv2d_layer_converter_(evaluator, ckks_encoder, galois_key, relin_keys, result, csps_conv_weights[0], csps_conv_biases[0], input_size=image_size, real_input_size=image_size, padding=paddings[0], stride=strides[0], data_size=data_size, const_param = 1)
     CHECK_TIME1 = time.time()
-    print('CONV2D 1 TIME', CHECK_TIME1-START_TIME)
-    convs[0].append(CHECK_TIME1-START_TIME)
+    print('CONV2D 1 TIME', CHECK_TIME1-DEPTH_TIME)
+    convs[0].append(CHECK_TIME1-DEPTH_TIME)
 
     result, const_param = square(evaluator, relin_keys, result, const_param)
     CHECK_TIME2 = time.time()
@@ -190,7 +198,7 @@ def enc_test(evaluator, ckks_encoder, galois_key, relin_keys, ctxt_list, csps_co
     avgpools[2].append(CHECK_TIME6-CHECK_TIME5)
 
 
-    result = flatten(evaluator, ckks_encoder, galois_key, relin_keys, result, OH, S, input_size=image_size, data_size=data_size, const_param=const_param)
+    result = flatten(evaluator, ckks_encoder, galois_key, relin_keys, result, OH, OH, S, input_size=image_size, data_size=data_size, const_param=const_param)
     CHECK_TIME10 = time.time()
     print('FLATTEN TIME', CHECK_TIME10-CHECK_TIME9)
     flattens.append(CHECK_TIME9-CHECK_TIME8)
@@ -249,8 +257,10 @@ def enc_test(evaluator, ckks_encoder, galois_key, relin_keys, ctxt_list, csps_co
         errors[i].append(sum)
         originals[i].append(max_data_idx)
         hes[i].append(max_ctxt_idx)
+        real_labels[i].append(label[i])
 
 labels = []
+depth_time = []
 convs = [[], [], []]
 sqs = [[], [], []]
 avgpools = [[], [], []]
@@ -261,15 +271,17 @@ totals = []
 errors = []
 originals = []
 hes = []
+real_labels = []
 for _ in range(num_of_data):
     errors.append([])
     originals.append([])
     hes.append([])
+    real_labels.append([])
 
 import pandas as pd
-for index in range(50):
-    data, label = next(iter(test_loader))
-    data, label = np.array(data), label.tolist()
+for index in range(300):
+    data, _label = next(iter(test_loader))
+    data, _label = np.array(data), _label.tolist()
     
     ctxt_list = []
     for j in range(image_height):
@@ -287,10 +299,11 @@ for index in range(50):
     ctxt_list[1].save('ctxt/mnist_ctxt2')
     ctxt_list[2].save('ctxt/mnist_ctxt3')
 
-    enc_test(evaluator, ckks_encoder, galois_key, relin_keys, ctxt_list, csps_conv_weights, csps_conv_biases, image_size, paddings, strides, data_size, label)
+    enc_test(evaluator, ckks_encoder, galois_key, relin_keys, ctxt_list, csps_conv_weights, csps_conv_biases, image_size, paddings, strides, data_size, _label)
 
     labels.append(index+1)
     df = pd.DataFrame(labels, columns=["label"])
+    df["DEPTH"] = depth_time
     df["CONV1"] = convs[0]
     df["SQ1"] = sqs[0]
     df["AvgPool1"] = avgpools[0]
@@ -312,6 +325,6 @@ for index in range(50):
         df[error_name] = errors[i]
         df[original_name] = originals[i]
         df[HE_name] = hes[i]
-        df[real_name] = label[i]
+        df[real_name] = real_labels[i]
     
     df.to_csv("CIFAR10.csv", index = False)

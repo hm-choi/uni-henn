@@ -12,7 +12,7 @@ poly_modulus_degree = 8192*2
 parms.set_poly_modulus_degree(poly_modulus_degree)
 bits_scale1 = 40
 bits_scale2 = 32
-coeff_mod_bit_sizes = [bits_scale1] + [bits_scale2]*9 + [bits_scale1]
+coeff_mod_bit_sizes = [bits_scale1] + [bits_scale2]*11 + [bits_scale1]
 parms.set_coeff_modulus(CoeffModulus.Create(poly_modulus_degree, coeff_mod_bit_sizes))
 
 scale = 2.0**bits_scale2
@@ -107,10 +107,15 @@ test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=num_of_data, 
 
 def enc_test(evaluator, ckks_encoder, galois_key, relin_keys, csps_ctxt, csps_conv_weights, csps_conv_biases, image_size, paddings, strides, data_size, label):
     START_TIME = time.time()
-    result, OH, S, const_param = conv2d_layer_converter_(evaluator, ckks_encoder, galois_key, relin_keys, [csps_ctxt], csps_conv_weights[0], csps_conv_biases[0], input_size=image_size, real_input_size=image_size, padding=paddings[0], stride=strides[0], data_size=data_size, const_param=1)
+
+    result = re_depth(ckks_encoder, evaluator, relin_keys, [csps_ctxt], 2)
+    DEPTH_TIME = time.time()
+    print(DEPTH_TIME - START_TIME)
+
+    result, OH, S, const_param = conv2d_layer_converter_(evaluator, ckks_encoder, galois_key, relin_keys, result, csps_conv_weights[0], csps_conv_biases[0], input_size=image_size, real_input_size=image_size, padding=paddings[0], stride=strides[0], data_size=data_size, const_param=1)
     CHECK_TIME1 = time.time()
     # print('CONV2D 1 TIME', CHECK_TIME1-START_TIME)
-    print(CHECK_TIME1-START_TIME)
+    print(CHECK_TIME1-DEPTH_TIME)
 
     result, const_param = approximated_ReLU_converter(evaluator, ckks_encoder, data_size, data_size, relin_keys, result, 0, const_param)
     CHECK_TIME2 = time.time()
@@ -121,7 +126,7 @@ def enc_test(evaluator, ckks_encoder, galois_key, relin_keys, csps_ctxt, csps_co
     # print('FLATTEN TIME', CHECK_TIME3-CHECK_TIME2)
     print(CHECK_TIME3-CHECK_TIME2)
 
-    result = flatten(evaluator, ckks_encoder, galois_key, relin_keys, result, OH, S, input_size=image_size, data_size=data_size, const_param=const_param)
+    result = flatten(evaluator, ckks_encoder, galois_key, relin_keys, result, OH, OH, S, input_size=image_size, data_size=data_size, const_param=const_param)
     CHECK_TIME4 = time.time()
     # print('FLATTEN TIME', CHECK_TIME3-CHECK_TIME2)
     print(CHECK_TIME4-CHECK_TIME3)
@@ -187,7 +192,7 @@ def enc_test(evaluator, ckks_encoder, galois_key, relin_keys, csps_ctxt, csps_co
         # print("real label     |", label[i])
         # print("="*30)
 
-for _ in range(10):
+for _ in range(30):
     data, label = next(iter(test_loader))
     data, label = np.array(data), label.tolist()
 

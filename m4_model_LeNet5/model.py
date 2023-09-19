@@ -14,7 +14,8 @@ batch_size = 32
 # MNIST 데이터셋 로드 및 전처리
 transform = transforms.Compose([
     transforms.Resize((32, 32)),
-    transforms.ToTensor()
+    transforms.ToTensor(),
+    transforms.Normalize((0.5,), (0.5,))
 ])
 
 train_dataset = datasets.MNIST(root='./../Data', train=True, transform=transform, download=True)

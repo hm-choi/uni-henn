@@ -12,7 +12,7 @@ parms.set_poly_modulus_degree(poly_modulus_degree)
 bits_scale1 = 40
 bits_scale2 = 32
 
-coeff_mod_bit_sizes = [bits_scale1] + [bits_scale2]*7 + [bits_scale1]
+coeff_mod_bit_sizes = [bits_scale1] + [bits_scale2]*11 + [bits_scale1]
 parms.set_coeff_modulus(CoeffModulus.Create(poly_modulus_degree, coeff_mod_bit_sizes))
 
 scale = 2.0**bits_scale2
@@ -44,15 +44,15 @@ class CNN(torch.nn.Module):
         # L1 Image shape=(?, 16, 16, 1)
         #    Conv     -> (?, 14, 14, 6)
         #    Pool     -> (?, 7, 7, 6)
-        self.Conv1 = torch.nn.Conv2d(in_channels=1, out_channels=6, kernel_size=3, stride=1, padding=0)
-        self.AvgPool1 = torch.nn.AvgPool2d(kernel_size=2)
+        self.Conv1 = torch.nn.Conv2d(in_channels=1, out_channels=6, kernel_size=4, stride=2, padding=0)
+        # self.AvgPool1 = torch.nn.AvgPool2d(kernel_size=2)
         self.FC1 = torch.nn.Linear(294, 64)
         self.FC2 = torch.nn.Linear(64, 10)
 
     def forward(self, x):
         x = self.Conv1(x)
         x = x * x
-        x = self.AvgPool1(x)
+        # x = self.AvgPool1(x)
         x = torch.flatten(x, 1)
         x = self.FC1(x)
         x = x * x
@@ -71,7 +71,7 @@ csps_fc_weights.append(model_cnn['FC1.weight'])
 csps_fc_biases.append(model_cnn['FC1.bias'])
 csps_fc_weights.append(model_cnn['FC2.weight'])
 csps_fc_biases.append(model_cnn['FC2.bias'])
-strides = [1]
+strides = [2]
 paddings = [0]
 
 image_size = 16 # Suppose that image shape is sqaure
@@ -88,22 +88,27 @@ test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=num_of_data, 
 
 def enc_test(evaluator, ckks_encoder, galois_key, relin_keys, csps_ctxt, csps_conv_weights, csps_conv_biases, image_size, paddings, strides, data_size, label):
     START_TIME = time.time()
-    result, OH, S, const_param = conv2d_layer_converter_(evaluator, ckks_encoder, galois_key, relin_keys, [csps_ctxt], csps_conv_weights[0], csps_conv_biases[0], input_size=image_size, real_input_size=image_size, padding=paddings[0], stride=strides[0], data_size=data_size, const_param=1)
+
+    result = re_depth(ckks_encoder, evaluator, relin_keys, [csps_ctxt], 4)
+    DEPTH_TIME = time.time()
+    print(DEPTH_TIME - START_TIME)
+
+    result, OH, S, const_param = conv2d_layer_converter_(evaluator, ckks_encoder, galois_key, relin_keys, result, csps_conv_weights[0], csps_conv_biases[0], input_size=image_size, real_input_size=image_size, padding=paddings[0], stride=strides[0], data_size=data_size, const_param=1)
     CHECK_TIME1 = time.time()
-    print(CHECK_TIME1-START_TIME)
+    print(CHECK_TIME1-DEPTH_TIME)
 
     result, const_param = square(evaluator, relin_keys, result, const_param)
     CHECK_TIME2 = time.time()
     print(CHECK_TIME2-CHECK_TIME1)
 
-    result, OH, S, const_param = average_pooling_layer_converter(evaluator, ckks_encoder, galois_key, relin_keys, result, kernel_size=2, input_size=image_size, real_input_size=OH, padding=0, stride=2, tmp_param=S, data_size=data_size, const_param = const_param)
-    CHECK_TIME3 = time.time()
-    print(CHECK_TIME3-CHECK_TIME2)
+    # result, OH, S, const_param = average_pooling_layer_converter(evaluator, ckks_encoder, galois_key, relin_keys, result, kernel_size=2, input_size=image_size, real_input_size=OH, padding=0, stride=2, tmp_param=S, data_size=data_size, const_param = const_param)
+    # CHECK_TIME3 = time.time()
+    # print(CHECK_TIME3-CHECK_TIME2)
 
 
-    result = flatten(evaluator, ckks_encoder, galois_key, relin_keys, result, OH, S, input_size=image_size, data_size=data_size, const_param=const_param)
+    result = flatten(evaluator, ckks_encoder, galois_key, relin_keys, result, OH, OH, S, input_size=image_size, data_size=data_size, const_param=const_param)
     CHECK_TIME4 = time.time()
-    print(CHECK_TIME4-CHECK_TIME3)
+    print(CHECK_TIME4-CHECK_TIME2)
 
     result = fc_layer_converter(evaluator, ckks_encoder, galois_key,relin_keys, result, csps_fc_weights[0], csps_fc_biases[0], data_size=data_size)
     CHECK_TIME5 = time.time()
@@ -148,7 +153,7 @@ def enc_test(evaluator, ckks_encoder, galois_key, relin_keys, csps_ctxt, csps_co
     # print()
     print(END_TIME-START_TIME)
 
-for i in range(100):
+for i in range(30):
     data, label = next(iter(test_loader))
     data, label = np.array(data), label.tolist()
 

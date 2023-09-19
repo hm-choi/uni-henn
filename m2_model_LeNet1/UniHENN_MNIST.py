@@ -12,7 +12,7 @@ poly_modulus_degree = 8192*2
 parms.set_poly_modulus_degree(poly_modulus_degree)
 bits_scale1 = 40
 bits_scale2 = 32
-coeff_mod_bit_sizes = [bits_scale1] + [bits_scale2]*7 + [bits_scale1]
+coeff_mod_bit_sizes = [bits_scale1] + [bits_scale2]*11 + [bits_scale1]
 parms.set_coeff_modulus(CoeffModulus.Create(poly_modulus_degree, coeff_mod_bit_sizes))
 
 scale = 2.0**bits_scale2
@@ -30,10 +30,10 @@ encryptor = Encryptor(context, public_key)
 evaluator = Evaluator(context)
 decryptor = Decryptor(context, secret_key)
 
-public_key.save('key/public_key')
-secret_key.save('key/secret_key')
-galois_key.save('key/galois_key')
-relin_keys.save('key/relin_keys')
+# public_key.save('key/public_key')
+# secret_key.save('key/secret_key')
+# galois_key.save('key/galois_key')
+# relin_keys.save('key/relin_keys')
 
 import torch.nn.functional as F
 import torch.optim as optim
@@ -45,55 +45,33 @@ class Square(torch.nn.Module):
     def forward(self, t):
         return torch.pow(t, 2)
 
-# class CNN(torch.nn.Module):
-#     def __init__(self):
-#         super(CNN, self).__init__()
-#         self.Conv1 = torch.nn.Conv2d(in_channels=1, out_channels=4, kernel_size=5, stride=1, padding=0)
-#         self.AvgPool1 = torch.nn.AvgPool2d(kernel_size=2)
-#         self.Conv2 = torch.nn.Conv2d(in_channels=4, out_channels=12, kernel_size=5, stride=1, padding=0)
-#         self.AvgPool2 = torch.nn.AvgPool2d(kernel_size=2)
-#         self.FC1 = torch.nn.Linear(192, 10)
-
-#     def forward(self, x):
-#         x = self.Conv1(x)
-#         x = x*x
-#         x = self.AvgPool1(x)
-#         x = self.Conv2(x)
-#         x = x*x
-#         x = self.AvgPool2(x)
-#         x = torch.flatten(x, 1)
-#         x = self.FC1(x)
-#         return x
-
 class CNN(torch.nn.Module):
     def __init__(self):
         super(CNN, self).__init__()
         self.Conv1 = torch.nn.Conv2d(in_channels=1, out_channels=4, kernel_size=5, stride=1, padding=0)
-        self.Square1 = Square()
         self.AvgPool1 = torch.nn.AvgPool2d(kernel_size=2)
         self.Conv2 = torch.nn.Conv2d(in_channels=4, out_channels=12, kernel_size=5, stride=1, padding=0)
-        self.Square2 = Square()
         self.AvgPool2 = torch.nn.AvgPool2d(kernel_size=2)
         self.FC1 = torch.nn.Linear(192, 10)
 
     def forward(self, x):
         x = self.Conv1(x)
-        x = self.Square1(x)
+        x = x*x
         x = self.AvgPool1(x)
         x = self.Conv2(x)
-        x = self.Square2(x)
+        x = x*x
         x = self.AvgPool2(x)
         x = torch.flatten(x, 1)
         x = self.FC1(x)
         return x
 
-model_cnn = torch.load('./LeNet1_Approx.pt', map_location=torch.device('cpu'))
-# model_cnn = torch.load('./M3_model.pth', map_location=torch.device('cpu'))
+# model_cnn = torch.load('./LeNet1_Approx.pt', map_location=torch.device('cpu'))
+model_cnn = torch.load('./M2_model.pth', map_location=torch.device('cpu'))
 # print(model_cnn)
 
 conv2d_client = CNN()
-conv2d_client = model_cnn
-print(model_cnn)
+conv2d_client.load_state_dict(model_cnn)
+# print(model_cnn)
 # print(model_cnn.get_parameter('layer0.weight'))
 # conv2d_client.Conv1.weight.data = model_cnn['Conv1.weight']
 # conv2d_client.Conv1.bias.data = model_cnn['Conv1.bias']
@@ -106,26 +84,12 @@ print(model_cnn)
 
 csps_conv_weights, csps_conv_biases, csps_fc_weights, csps_fc_biases = [], [], [], []
 
-for name, param in model_cnn.named_parameters():
-    if 'Conv' in name: 
-        if 'weight' in name:
-            csps_conv_weights.append(param)
-        elif 'bias' in name:
-            csps_conv_biases.append(param)
-    elif 'Linear' in name:
-        if 'weight' in name:
-            csps_fc_weights.append(param)
-        elif 'bias' in name:
-            csps_fc_biases.append(param)
-
-print(np.shape(csps_conv_weights))
-
-# csps_conv_weights.append(model_cnn['Conv1.weight'])
-# csps_conv_biases.append(model_cnn['Conv1.bias'])
-# csps_conv_weights.append(model_cnn['Conv2.weight'])
-# csps_conv_biases.append(model_cnn['Conv2.bias'])
-# csps_fc_weights.append(model_cnn['FC1.weight'])
-# csps_fc_biases.append(model_cnn['FC1.bias'])
+csps_conv_weights.append(model_cnn['Conv1.weight'])
+csps_conv_biases.append(model_cnn['Conv1.bias'])
+csps_conv_weights.append(model_cnn['Conv2.weight'])
+csps_conv_biases.append(model_cnn['Conv2.bias'])
+csps_fc_weights.append(model_cnn['FC1.weight'])
+csps_fc_biases.append(model_cnn['FC1.bias'])
 strides = [1, 1]
 paddings = [0, 0]
 
@@ -143,9 +107,14 @@ test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=num_of_data, 
 
 def enc_test(evaluator, ckks_encoder, galois_key, relin_keys, csps_ctxt, csps_conv_weights, csps_conv_biases, image_size, paddings, strides, data_size, label):
     START_TIME = time.time()
-    result, OH, S, const_param = conv2d_layer_converter_(evaluator, ckks_encoder, galois_key, relin_keys, [csps_ctxt], csps_conv_weights[0], csps_conv_biases[0], input_size=image_size, real_input_size=image_size, padding=paddings[0], stride=strides[0], data_size=data_size, const_param=1)
+
+    result = re_depth(ckks_encoder, evaluator, relin_keys, [csps_ctxt], 4)
+    DEPTH_TIME = time.time()
+    print(DEPTH_TIME - START_TIME)
+
+    result, OH, S, const_param = conv2d_layer_converter_(evaluator, ckks_encoder, galois_key, relin_keys, result, csps_conv_weights[0], csps_conv_biases[0], input_size=image_size, real_input_size=image_size, padding=paddings[0], stride=strides[0], data_size=data_size, const_param=1)
     CHECK_TIME1 = time.time()
-    print(CHECK_TIME1-START_TIME)
+    print(CHECK_TIME1-DEPTH_TIME)
     # print(CHECK_TIME1-START_TIME)
 
     result, const_param = square(evaluator, relin_keys, result, const_param)
@@ -169,7 +138,7 @@ def enc_test(evaluator, ckks_encoder, galois_key, relin_keys, csps_ctxt, csps_co
     CHECK_TIME6 = time.time()
     print(CHECK_TIME6-CHECK_TIME5)
 
-    result = flatten(evaluator, ckks_encoder, galois_key, relin_keys, result, OH, S, input_size=image_size, data_size=data_size, const_param=const_param)
+    result = flatten(evaluator, ckks_encoder, galois_key, relin_keys, result, OH, OH, S, input_size=image_size, data_size=data_size, const_param=const_param)
     CHECK_TIME7 = time.time()
     print(CHECK_TIME7-CHECK_TIME6)
 
@@ -223,7 +192,7 @@ def enc_test(evaluator, ckks_encoder, galois_key, relin_keys, csps_ctxt, csps_co
         # print("real label     |", label[i])
         # print("="*30)
 
-for _ in range(10):
+for _ in range(30):
     data, label = next(iter(test_loader))
     data, label = np.array(data), label.tolist()
 

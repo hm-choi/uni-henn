@@ -6,6 +6,20 @@ import math
 num_of_slot = 8192
 scale = 2**32
 
+def re_depth(encoder, evaluator, relin_keys, ctxt_list, count):
+    result_list = []
+    coeff = [1] * num_of_slot
+        
+    for ctxt in ctxt_list:
+        for _ in range(count):
+            encoded_coeff = encoder.encode(coeff, scale)
+            evaluator.mod_switch_to_inplace(encoded_coeff, ctxt.parms_id())
+            ctxt = evaluator.multiply_plain(ctxt, encoded_coeff)
+            evaluator.relinearize_inplace(ctxt, relin_keys)
+            evaluator.rescale_to_next_inplace(ctxt)
+        result_list.append(ctxt)
+    return result_list
+
 def calculate_data_size(image_size, csps_conv_weights, csps_fc_weights, strides, paddings):
     data_size = image_size**2
     OH = image_size
@@ -125,11 +139,17 @@ def conv2d_layer_converter_(evaluator, encoder, galois_key, relin_keys, ctxt_lis
                 encoded_coeff = encoder.encode(weight_list, scale) #
                 evaluator.mod_switch_to_inplace(encoded_coeff, rotated_ctxt.parms_id()) #
 
-                mult_ctxt = evaluator.multiply_plain(rotated_ctxt, encoded_coeff) #
-                evaluator.relinearize_inplace(mult_ctxt, relin_keys)
-                evaluator.rescale_to_next_inplace(mult_ctxt) #
+                # scale is too small
+                try:
+                    mult_ctxt = evaluator.multiply_plain(rotated_ctxt, encoded_coeff)
+                    evaluator.relinearize_inplace(mult_ctxt, relin_keys)
+                    evaluator.rescale_to_next_inplace(mult_ctxt)
 
-                added_tmp_list.append(mult_ctxt)
+                    added_tmp_list.append(mult_ctxt)
+                except RuntimeError as e:
+                    print("Warning: An error occurred, but it's being ignored:", str(e))
+
+                # mult_ctxt = evaluator.multiply_plain(rotated_ctxt, encoded_coeff)
         result = evaluator.add_many(added_tmp_list)
 
         bias = [bias_list.tolist()[o]]+[0]*(stride * tmp_param - 1)  
@@ -146,7 +166,7 @@ def conv2d_layer_converter_(evaluator, encoder, galois_key, relin_keys, ctxt_lis
 
     return result_list, OH, tmp_param*stride, 1
 
-def flatten(evaluator, encoder, galois_key, relin_keys, ctxt_list, OH:int, tmp:int, input_size:int=28, data_size:int=400, const_param:int=1):
+def flatten(evaluator, encoder, galois_key, relin_keys, ctxt_list, OW:int, OH:int, tmp:int, input_size:int=28, data_size:int=400, const_param:int=1):
     if const_param != 1:
         gather_ctxt_list = []
         for ctxt in ctxt_list:
@@ -173,7 +193,7 @@ def flatten(evaluator, encoder, galois_key, relin_keys, ctxt_list, OH:int, tmp:i
 
         ctxt_list = gather_ctxt_list
 
-    elif tmp != 1:
+    elif tmp != 1 and OW != 1:
         rotated_ctxt_list = []
         for ctxt in ctxt_list:
             tmp_list = []
@@ -210,23 +230,26 @@ def flatten(evaluator, encoder, galois_key, relin_keys, ctxt_list, OH:int, tmp:i
     result_list = []
     for o in range(num_ctxt):
         ctxt = ctxt_list[o]
-        tmp_list = []
-        for i in range(OH):
-            coeff = [1]*OH + [0]*(data_size - OH)
-            coeff = np.array(coeff * (num_of_slot//len(coeff)))
-            coeff = np.roll(coeff, input_size * tmp * i)
+        if OH == 1:
+            result = ctxt
+        else:
+            tmp_list = []
+            for i in range(OH):
+                coeff = [1]*OH + [0]*(data_size - OH)
+                coeff = np.array(coeff * (num_of_slot//len(coeff)))
+                coeff = np.roll(coeff, input_size * tmp * i)
 
-            encoded_coeff = encoder.encode(coeff, scale)
-            evaluator.mod_switch_to_inplace(encoded_coeff, ctxt.parms_id()) 
-            temp = evaluator.multiply_plain(ctxt, encoded_coeff)
-            evaluator.relinearize_inplace(temp, relin_keys)
-            evaluator.rescale_to_next_inplace(temp)
-            
-            rot = i * (input_size * tmp - OH)
-            tmp_list.append(evaluator.rotate_vector(temp, rot, galois_key))
+                encoded_coeff = encoder.encode(coeff, scale)
+                evaluator.mod_switch_to_inplace(encoded_coeff, ctxt.parms_id()) 
+                temp = evaluator.multiply_plain(ctxt, encoded_coeff)
+                evaluator.relinearize_inplace(temp, relin_keys)
+                evaluator.rescale_to_next_inplace(temp)
+                
+                rot = i * (input_size * tmp - OH)
+                tmp_list.append(evaluator.rotate_vector(temp, rot, galois_key))
 
-        result = evaluator.add_many(tmp_list)
-        result_list.append(evaluator.rotate_vector(result, (-1)*o*OH*OH,galois_key))
+            result = evaluator.add_many(tmp_list)
+        result_list.append(evaluator.rotate_vector(result, (-1)*o*OW*OH,galois_key))
     return evaluator.add_many(result_list)
 
 def fc_layer_converter(evaluator, encoder, galois_key, relin_keys, ctxt, weights, bias, data_size:int=400):
