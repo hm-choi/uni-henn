@@ -51,14 +51,14 @@ csps_fc_biases.append(model_cnn['FC2.bias'])
 strides = [3]
 paddings = [0]
 
-print()
-print("Conv1.weight:\t", csps_conv_weights[0].shape)
-print("Conv1.bias:\t", csps_conv_biases[0].shape)
-print("FC1.weight:\t", csps_fc_weights[0].shape)
-print("FC1.bias:\t", csps_fc_biases[0].shape)
-print("FC2.weight:\t", csps_fc_weights[1].shape)
-print("FC2.bias:\t", csps_fc_biases[1].shape)
-print()
+# print()
+# print("Conv1.weight:\t", csps_conv_weights[0].shape)
+# print("Conv1.bias:\t", csps_conv_biases[0].shape)
+# print("FC1.weight:\t", csps_fc_weights[0].shape)
+# print("FC1.bias:\t", csps_fc_biases[0].shape)
+# print("FC2.weight:\t", csps_fc_weights[1].shape)
+# print("FC2.bias:\t", csps_fc_biases[1].shape)
+# print()
 
 def enc_test(evaluator, ckks_encoder, galois_key, relin_keys, csps_ctxt, csps_conv_weights, csps_conv_biases, image_size, paddings, strides, data_size, label, scale):
     global labels
@@ -79,9 +79,9 @@ def enc_test(evaluator, ckks_encoder, galois_key, relin_keys, csps_ctxt, csps_co
 
     START_TIME = time.time()
 
-    result = re_depth(ckks_encoder, evaluator, relin_keys, [csps_ctxt], 4, scale)
+    result = re_depth(ckks_encoder, evaluator, relin_keys, [csps_ctxt], 4)
     DEPTH_TIME = time.time()
-    print(DEPTH_TIME - START_TIME)
+    print('DROP DEPTH TIME', DEPTH_TIME - START_TIME)
     depth_time.append(DEPTH_TIME - START_TIME)
 
     result, OH, S, const_param = conv2d_layer_converter_(evaluator, ckks_encoder, galois_key, relin_keys, result, csps_conv_weights[0], csps_conv_biases[0], input_size=image_size, real_input_size=image_size, padding=paddings[0], stride=strides[0], data_size=data_size, const_param=1)
@@ -132,7 +132,7 @@ def enc_test(evaluator, ckks_encoder, galois_key, relin_keys, csps_ctxt, csps_co
     #         count_correct += 1
 
     # print('Test Accuracy (Overall): {0}% ({1}/{2})'.format(count_correct/num_of_data*100, count_correct, num_of_data))
-    # print('Total Time', END_TIME-START_TIME)
+    print('Total Time', END_TIME-START_TIME)
     # print(END_TIME-START_TIME)
     totals.append(END_TIME-START_TIME)
     # print()
@@ -176,7 +176,7 @@ poly_modulus_degree = 8192*2
 parms.set_poly_modulus_degree(poly_modulus_degree)
 bits_scale1 = 40
 # bits_scale2 = 32
-for bits_scale2 in [23]:
+for bits_scale2 in [32]:
     depth = 11
     coeff_mod_bit_sizes = [bits_scale1] + [bits_scale2]*depth + [bits_scale1]
     parms.set_coeff_modulus(CoeffModulus.Create(poly_modulus_degree, coeff_mod_bit_sizes))
@@ -185,7 +185,6 @@ for bits_scale2 in [23]:
     context = SEALContext(parms)
     ckks_encoder = CKKSEncoder(context)
     slot_count = ckks_encoder.slot_count()
-    print(f'Number of slots: {slot_count}') # 8192
     
     keygen = KeyGenerator(context)
     public_key = keygen.create_public_key()
@@ -234,8 +233,6 @@ for bits_scale2 in [23]:
     #     he_values.append([])
     #     error_values.append([])
 
-    print(data_size, num_of_data, bits_scale2)
-
     transform = transforms.Compose([
         transforms.ToTensor(),
         transforms.Normalize((0.5,), (0.5,))
@@ -244,7 +241,7 @@ for bits_scale2 in [23]:
     test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=num_of_data, shuffle=True, drop_last=True)
 
     import pandas as pd
-    for index in range(30):
+    for index in range(5):
         data, _label = next(iter(test_loader))
         data, _label = np.array(data), _label.tolist()
 
@@ -258,9 +255,10 @@ for bits_scale2 in [23]:
         ctxt = encryptor.encrypt(ckks_encoder.encode(new_data, scale))
         # ctxt.save('ctxt/mnist_ctxt')
 
+        print('result', index+1)
         enc_test(evaluator, ckks_encoder, galois_key, relin_keys, ctxt, csps_conv_weights, csps_conv_biases, image_size, paddings, strides, data_size, _label, scale)
-
-        # for _ in range(10):
+        print()
+        
         labels.append(index+1)
         df = pd.DataFrame(labels, columns=["label"])
         df["DEPTH"] = depth_time

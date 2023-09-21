@@ -138,7 +138,7 @@ def enc_test(evaluator, ckks_encoder, galois_key, relin_keys, csps_ctxt, csps_co
 
     result = re_depth(ckks_encoder, evaluator, relin_keys, [csps_ctxt], 2)
     DEPTH_TIME = time.time()
-    print('DEPTH TIME', DEPTH_TIME - START_TIME)
+    print('DROP DEPTH TIME', DEPTH_TIME - START_TIME)
 
     result, OH, S, const_param = conv2d_layer_converter_(evaluator, ckks_encoder, galois_key, relin_keys, result, csps_conv_weights[0], csps_conv_biases[0], input_size=image_size, real_input_size=image_size, padding=paddings[0], stride=strides[0], data_size=data_size, const_param =1)
     CHECK_TIME1 = time.time()
@@ -247,7 +247,7 @@ for _ in range(num_of_data):
     hes.append([])
     real_labels.append([])
 
-for index in range(300):
+for index in range(1):
     data, _label = next(iter(test_loader))
     data, _label = np.array(data), _label.tolist()
     
@@ -259,6 +259,8 @@ for index in range(300):
     new_data = torch.Tensor(new_data)
 
     csps_ctxt = encryptor.encrypt(ckks_encoder.encode(new_data, scale))
-    csps_ctxt.save('ctxt/mnist_ctxt')
+    # csps_ctxt.save('ctxt/mnist_ctxt')
 
+    print('result', index + 1)
     enc_test(evaluator, ckks_encoder, galois_key, relin_keys, csps_ctxt, csps_conv_weights, csps_conv_biases, image_size, paddings, strides, data_size, _label)
+    print()

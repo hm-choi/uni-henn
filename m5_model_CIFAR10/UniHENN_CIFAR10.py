@@ -30,10 +30,10 @@ encryptor = Encryptor(context, public_key)
 evaluator = Evaluator(context)
 decryptor = Decryptor(context, secret_key)
 
-public_key.save('key/public_key')
-secret_key.save('key/secret_key')
-galois_key.save('key/galois_key')
-relin_keys.save('key/relin_keys')
+# public_key.save('key/public_key')
+# secret_key.save('key/secret_key')
+# galois_key.save('key/galois_key')
+# relin_keys.save('key/relin_keys')
 
 import torch.nn.functional as F
 import torch.optim as optim
@@ -114,7 +114,7 @@ def enc_test(evaluator, ckks_encoder, galois_key, relin_keys, ctxt_list, csps_co
 
     result = re_depth(ckks_encoder, evaluator, relin_keys, ctxt_list, 3)
     DEPTH_TIME = time.time()
-    print('DEPTH TIME', DEPTH_TIME - START_TIME)
+    print('DROP DEPTH TIME', DEPTH_TIME - START_TIME)
 
     result, OH, S, const_param = conv2d_layer_converter_(evaluator, ckks_encoder, galois_key, relin_keys, result, csps_conv_weights[0], csps_conv_biases[0], input_size=image_size, real_input_size=image_size, padding=paddings[0], stride=strides[0], data_size=data_size, const_param = 1)
     CHECK_TIME1 = time.time()
@@ -198,12 +198,12 @@ def enc_test(evaluator, ckks_encoder, galois_key, relin_keys, ctxt_list, csps_co
                 max_ctxt = ctxt_data
                 max_ctxt_idx = j
         
-        print(i+1, 'th result')
-        print("Error          |", sum)
-        print("original label |", max_data_idx)
-        print("HE label       |", max_ctxt_idx)
-        print("real label     |", label[i])
-        print("="*30)
+        # print(i+1, 'th result')
+        # print("Error          |", sum)
+        # print("original label |", max_data_idx)
+        # print("HE label       |", max_ctxt_idx)
+        # print("real label     |", label[i])
+        # print("="*30)
         
         errors[i].append(sum)
         originals[i].append(max_data_idx)
@@ -237,8 +237,10 @@ for index in range(num_of_data):
         ctxt = encryptor.encrypt(ckks_encoder.encode(new_data, scale))
         ctxt_list.append(ctxt)
 
-    ctxt_list[0].save('ctxt/mnist_ctxt1')
-    ctxt_list[1].save('ctxt/mnist_ctxt2')
-    ctxt_list[2].save('ctxt/mnist_ctxt3')
+    # ctxt_list[0].save('ctxt/mnist_ctxt1')
+    # ctxt_list[1].save('ctxt/mnist_ctxt2')
+    # ctxt_list[2].save('ctxt/mnist_ctxt3')
 
+    print('result', index + 1)
     enc_test(evaluator, ckks_encoder, galois_key, relin_keys, ctxt_list, csps_conv_weights, csps_conv_biases, image_size, paddings, strides, data_size, _label)
+    print(1)
