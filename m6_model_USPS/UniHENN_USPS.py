@@ -40,18 +40,13 @@ import torch.optim as optim
 class CNN(torch.nn.Module):
     def __init__(self):
         super(CNN, self).__init__()
-        # L1 Image shape=(?, 16, 16, 1)
-        #    Conv     -> (?, 14, 14, 6)
-        #    Pool     -> (?, 7, 7, 6)
         self.Conv1 = torch.nn.Conv2d(in_channels=1, out_channels=6, kernel_size=4, stride=2, padding=0)
-        # self.AvgPool1 = torch.nn.AvgPool2d(kernel_size=2)
         self.FC1 = torch.nn.Linear(294, 64)
         self.FC2 = torch.nn.Linear(64, 10)
 
     def forward(self, x):
         x = self.Conv1(x)
         x = x * x
-        # x = self.AvgPool1(x)
         x = torch.flatten(x, 1)
         x = self.FC1(x)
         x = x * x
