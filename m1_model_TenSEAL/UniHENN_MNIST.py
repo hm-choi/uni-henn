@@ -18,8 +18,6 @@ import torch.optim as optim
 class CNN(torch.nn.Module):
     def __init__(self, hidden=64, output=10):
         super(CNN, self).__init__()
-        # L1 Image shape=(?, 28, 28, 1)
-        #    Conv     -> (?, 9, 9, 8)
         self.Conv1 = torch.nn.Conv2d(in_channels=1, out_channels=8, kernel_size=4, stride=3, padding=0)
         self.FC1 = torch.nn.Linear(9 * 9 * 8, 64)
         self.FC2 = torch.nn.Linear(64, 10)
@@ -34,7 +32,6 @@ class CNN(torch.nn.Module):
         return x
 
 model_cnn = torch.load('./MNIST_test1.pth', map_location=torch.device('cpu'))
-# print(model_cnn)
 
 conv2d_client = CNN()
 conv2d_client.Conv1.weight.data = model_cnn['Conv1.weight']
@@ -89,38 +86,32 @@ def enc_test(evaluator, ckks_encoder, galois_key, relin_keys, csps_ctxt, csps_co
 
     result, OH, S, const_param = conv2d_layer_converter_(evaluator, ckks_encoder, galois_key, relin_keys, result, csps_conv_weights[0], csps_conv_biases[0], input_size=image_size, real_input_size=image_size, padding=paddings[0], stride=strides[0], data_size=data_size, const_param=1)
     CHECK_TIME1 = time.time()
-    # print('CONV2D 1 TIME', CHECK_TIME1-START_TIME)
-    print(CHECK_TIME1-DEPTH_TIME)
+    print('CONV2D 1 TIME', CHECK_TIME1-START_TIME)
     convs[0].append(CHECK_TIME1-DEPTH_TIME)
 
     result, const_param = square(evaluator, relin_keys, result, const_param=const_param)
     CHECK_TIME2 = time.time()
-    # print('SQ 1 TIME', CHECK_TIME2-CHECK_TIME1)
-    print(CHECK_TIME2-CHECK_TIME1)
+    print('SQ 1 TIME', CHECK_TIME2-CHECK_TIME1)
     sqs[0].append(CHECK_TIME2-CHECK_TIME1)
 
     result = flatten(evaluator, ckks_encoder, galois_key, relin_keys, result, OH, OH, S, input_size=image_size, data_size=data_size, const_param=const_param)
     CHECK_TIME3 = time.time()
-    # print('FLATTEN TIME', CHECK_TIME3-CHECK_TIME2)
-    print(CHECK_TIME3-CHECK_TIME2)
+    print('FLATTEN TIME', CHECK_TIME3-CHECK_TIME2)
     flattens.append(CHECK_TIME3-CHECK_TIME2)
 
     result = fc_layer_converter(evaluator, ckks_encoder, galois_key, relin_keys, result, csps_fc_weights[0], csps_fc_biases[0], data_size=data_size)
     CHECK_TIME4 = time.time()
-    # print('FC1 TIME', CHECK_TIME4-CHECK_TIME3)
-    print(CHECK_TIME4-CHECK_TIME3)
+    print('FC1 TIME', CHECK_TIME4-CHECK_TIME3)
     fcs[0].append(CHECK_TIME4-CHECK_TIME3)
 
     result, const_param = square(evaluator, relin_keys, result, const_param=1)
     CHECK_TIME5 = time.time()
-    # print('SQ 2 TIME', CHECK_TIME5-CHECK_TIME4)
-    print(CHECK_TIME5-CHECK_TIME4)
+    print('SQ 2 TIME', CHECK_TIME5-CHECK_TIME4)
     sqs[1].append(CHECK_TIME5-CHECK_TIME4)
 
     result = fc_layer_converter(evaluator, ckks_encoder, galois_key,relin_keys, result, csps_fc_weights[1], csps_fc_biases[1], data_size=data_size)
     END_TIME = time.time()
-    # print('FC2 TIME', END_TIME-CHECK_TIME5)
-    print(END_TIME-CHECK_TIME5)
+    print('FC2 TIME', END_TIME-CHECK_TIME5)
     fcs[1].append(END_TIME-CHECK_TIME5)
 
     # count_correct = 0

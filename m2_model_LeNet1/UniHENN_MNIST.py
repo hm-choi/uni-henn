@@ -19,7 +19,6 @@ scale = 2.0**bits_scale2
 context = SEALContext(parms)
 ckks_encoder = CKKSEncoder(context)
 slot_count = ckks_encoder.slot_count()
-print(f'Number of slots: {slot_count}') # 8192
  
 keygen = KeyGenerator(context)
 public_key = keygen.create_public_key()
@@ -65,9 +64,7 @@ class CNN(torch.nn.Module):
         x = self.FC1(x)
         return x
 
-# model_cnn = torch.load('./LeNet1_Approx.pt', map_location=torch.device('cpu'))
 model_cnn = torch.load('./M2_model.pth', map_location=torch.device('cpu'))
-# print(model_cnn)
 
 conv2d_client = CNN()
 conv2d_client.load_state_dict(model_cnn)
@@ -93,7 +90,7 @@ csps_fc_biases.append(model_cnn['FC1.bias'])
 strides = [1, 1]
 paddings = [0, 0]
 
-image_size = 28 # Suppose that image shape is sqaure
+image_size = 28 
 data_size = 28 * (28 + 1) + 1
 num_of_data = int((poly_modulus_degree/2)//data_size)
 print(data_size, num_of_data)

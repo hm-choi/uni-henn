@@ -74,7 +74,7 @@ csps_fc_biases.append(model_cnn['FC2.bias'])
 strides = [2]
 paddings = [0]
 
-image_size = 16 # Suppose that image shape is sqaure
+image_size = 16
 data_size = 320
 num_of_data = int((poly_modulus_degree/2)//data_size)
 print(data_size, num_of_data)
@@ -100,11 +100,6 @@ def enc_test(evaluator, ckks_encoder, galois_key, relin_keys, csps_ctxt, csps_co
     result, const_param = square(evaluator, relin_keys, result, const_param)
     CHECK_TIME2 = time.time()
     print(CHECK_TIME2-CHECK_TIME1)
-
-    # result, OH, S, const_param = average_pooling_layer_converter(evaluator, ckks_encoder, galois_key, relin_keys, result, kernel_size=2, input_size=image_size, real_input_size=OH, padding=0, stride=2, tmp_param=S, data_size=data_size, const_param = const_param)
-    # CHECK_TIME3 = time.time()
-    # print(CHECK_TIME3-CHECK_TIME2)
-
 
     result = flatten(evaluator, ckks_encoder, galois_key, relin_keys, result, OH, OH, S, input_size=image_size, data_size=data_size, const_param=const_param)
     CHECK_TIME4 = time.time()
