@@ -116,7 +116,7 @@ def enc_test(evaluator, ckks_encoder, galois_key, relin_keys, csps_ctxt, csps_co
 
     result, OH, S, const_param = average_pooling_layer_converter(evaluator, ckks_encoder, galois_key, relin_keys, result, kernel_size=2, input_size=image_size, real_input_size=OH, padding=0, stride=2, tmp_param=S, data_size=data_size, const_param=const_param)
     CHECK_TIME3 = time.time()
-    print('FLATTEN TIME', CHECK_TIME3-CHECK_TIME2)
+    print('Avg Pool 1 TIME', CHECK_TIME3-CHECK_TIME2)
 
     result = flatten(evaluator, ckks_encoder, galois_key, relin_keys, result, OH, OH, S, input_size=image_size, data_size=data_size, const_param=const_param)
     CHECK_TIME4 = time.time()
