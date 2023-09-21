@@ -221,7 +221,7 @@ for _ in range(num_of_data):
     hes.append([])
     real_labels.append([])
 
-for index in range(num_of_data):
+for index in range(1):
     data, _label = next(iter(test_loader))
     data, _label = np.array(data), _label.tolist()
     

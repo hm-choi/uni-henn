@@ -186,7 +186,7 @@ def enc_test(evaluator, ckks_encoder, galois_key, relin_keys, csps_ctxt, csps_co
         # print("real label     |", label[i])
         # print("="*30)
 
-for _ in range(5):
+for index in range(5):
     data, label = next(iter(test_loader))
     data, label = np.array(data), label.tolist()
 

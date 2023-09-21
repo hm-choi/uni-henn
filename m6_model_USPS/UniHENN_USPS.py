@@ -145,7 +145,7 @@ def enc_test(evaluator, ckks_encoder, galois_key, relin_keys, csps_ctxt, csps_co
     print('Total Time', END_TIME-START_TIME)
     # print()
 
-for i in range(30):
+for index in range(5):
     data, label = next(iter(test_loader))
     data, label = np.array(data), label.tolist()
 
