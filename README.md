@@ -10,15 +10,18 @@
   - CentOS 7.8.64
   - 16 cores Intel(R) Xeon(R) Gold 5220 CPU @ 2.20GHz) with 64GB DRAM
 
-## 2. Installation
+## 2. Requirements
 - Python 3.8.1
 - SEAL-Python (Release 4.0.0, https://github.com/Huelse/SEAL-Python)
 - Pytorch
 - TorchVision
 - numpy
 - pandas
-- Jupyter Notebook
 
-## 3. Setting
+## 3. How to use UniHENN
 
-TBD
+```
+git clone https://github.com/hm-choi/uni-henn.git
+cd uni-henn/*model folder*
+python UniHENN_****.py
+```
