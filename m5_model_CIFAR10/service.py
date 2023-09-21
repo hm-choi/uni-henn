@@ -290,11 +290,7 @@ def fc_layer_converter(evaluator, encoder, galois_key, relin_keys, ctxt, weights
     return evaluator.add_plain(all_addition, sss)
 
 def batch_norm_converter(evaluator, encoder, ctxt, running_mean, input_size, running_var, weight, beta, epsilon:float=0.001):
-    param = 1/np.sqrt(running_var + epsilon)
-    # if weight is not None:
-    #     coeff = weight * (num_of_slot//)
-
-
+    param = 1/np.sqrt(running_var + epsilon)    
     temp = evaluator.sub_plain(ctxt, encoder.encode(running_mean * scale_val, scale))
     temp = evaluator.multiply_plain(temp, encoder.encode(param * scale_val, scale))
     temp = evaluator.multiply_plain(temp, encoder.encode(gamma * scale_val, scale))
@@ -469,8 +465,8 @@ def conv1d_layer_converter(evaluator, encoder, galois_key, relin_keys, ctxt_list
 def logistic_regression(evaluator, encoder, galois_key, relin_keys, ctxt, weights, bias_list, rot_interval):
     weights = weights.transpose()
     
-    len_input  = weights.shape[1] # 784
-    len_output   = weights.shape[0] # 10
+    len_input  = weights.shape[1] 
+    len_output   = weights.shape[0]
  
     weights_origin = []
     for idx in range(len_input):
