@@ -19,7 +19,6 @@ scale = 2.0**bits_scale2
 context = SEALContext(parms)
 ckks_encoder = CKKSEncoder(context)
 slot_count = ckks_encoder.slot_count()
-print(f'Number of slots: {slot_count}') # 8192
  
 keygen = KeyGenerator(context)
 public_key = keygen.create_public_key()
@@ -30,10 +29,10 @@ encryptor = Encryptor(context, public_key)
 evaluator = Evaluator(context)
 decryptor = Decryptor(context, secret_key)
 
-public_key.save('key/public_key')
-secret_key.save('key/secret_key')
-galois_key.save('key/galois_key')
-relin_keys.save('key/relin_keys')
+# public_key.save('key/public_key')
+# secret_key.save('key/secret_key')
+# galois_key.save('key/galois_key')
+# relin_keys.save('key/relin_keys')
 
 import torch.nn.functional as F
 import torch.optim as optim
@@ -41,18 +40,13 @@ import torch.optim as optim
 class CNN(torch.nn.Module):
     def __init__(self):
         super(CNN, self).__init__()
-        # L1 Image shape=(?, 16, 16, 1)
-        #    Conv     -> (?, 14, 14, 6)
-        #    Pool     -> (?, 7, 7, 6)
         self.Conv1 = torch.nn.Conv2d(in_channels=1, out_channels=6, kernel_size=4, stride=2, padding=0)
-        # self.AvgPool1 = torch.nn.AvgPool2d(kernel_size=2)
         self.FC1 = torch.nn.Linear(294, 64)
         self.FC2 = torch.nn.Linear(64, 10)
 
     def forward(self, x):
         x = self.Conv1(x)
         x = x * x
-        # x = self.AvgPool1(x)
         x = torch.flatten(x, 1)
         x = self.FC1(x)
         x = x * x
@@ -74,10 +68,9 @@ csps_fc_biases.append(model_cnn['FC2.bias'])
 strides = [2]
 paddings = [0]
 
-image_size = 16 # Suppose that image shape is sqaure
+image_size = 16
 data_size = 320
 num_of_data = int((poly_modulus_degree/2)//data_size)
-print(data_size, num_of_data)
 
 transform = transforms.Compose([
     transforms.ToTensor(),
@@ -91,36 +84,31 @@ def enc_test(evaluator, ckks_encoder, galois_key, relin_keys, csps_ctxt, csps_co
 
     result = re_depth(ckks_encoder, evaluator, relin_keys, [csps_ctxt], 4)
     DEPTH_TIME = time.time()
-    print(DEPTH_TIME - START_TIME)
+    print('DROP DEPTH TIME', DEPTH_TIME - START_TIME)
 
     result, OH, S, const_param = conv2d_layer_converter_(evaluator, ckks_encoder, galois_key, relin_keys, result, csps_conv_weights[0], csps_conv_biases[0], input_size=image_size, real_input_size=image_size, padding=paddings[0], stride=strides[0], data_size=data_size, const_param=1)
     CHECK_TIME1 = time.time()
-    print(CHECK_TIME1-DEPTH_TIME)
+    print('CONV2D 1 TIME', CHECK_TIME1-DEPTH_TIME)
 
     result, const_param = square(evaluator, relin_keys, result, const_param)
     CHECK_TIME2 = time.time()
-    print(CHECK_TIME2-CHECK_TIME1)
-
-    # result, OH, S, const_param = average_pooling_layer_converter(evaluator, ckks_encoder, galois_key, relin_keys, result, kernel_size=2, input_size=image_size, real_input_size=OH, padding=0, stride=2, tmp_param=S, data_size=data_size, const_param = const_param)
-    # CHECK_TIME3 = time.time()
-    # print(CHECK_TIME3-CHECK_TIME2)
-
+    print('SQ 1 TIME', CHECK_TIME2-CHECK_TIME1)
 
     result = flatten(evaluator, ckks_encoder, galois_key, relin_keys, result, OH, OH, S, input_size=image_size, data_size=data_size, const_param=const_param)
     CHECK_TIME4 = time.time()
-    print(CHECK_TIME4-CHECK_TIME2)
+    print('FLATTEN TIME', CHECK_TIME4-CHECK_TIME2)
 
     result = fc_layer_converter(evaluator, ckks_encoder, galois_key,relin_keys, result, csps_fc_weights[0], csps_fc_biases[0], data_size=data_size)
     CHECK_TIME5 = time.time()
-    print(CHECK_TIME5-CHECK_TIME4)
+    print('FC 1 TIME', CHECK_TIME5-CHECK_TIME4)
 
     result, const_param = square(evaluator, relin_keys, result, const_param=1)
     CHECK_TIME6 = time.time()
-    print(CHECK_TIME6-CHECK_TIME5)
+    print('SQ 2 TIME', CHECK_TIME6-CHECK_TIME5)
 
     result = fc_layer_converter(evaluator, ckks_encoder, galois_key,relin_keys, result, csps_fc_weights[1], csps_fc_biases[1], data_size=data_size)
     END_TIME = time.time()
-    print(END_TIME-CHECK_TIME6)
+    print('FC 2 TIME', END_TIME-CHECK_TIME6)
 
     count_correct = 0
     for i in range(num_of_data):
@@ -149,11 +137,10 @@ def enc_test(evaluator, ckks_encoder, galois_key, relin_keys, csps_ctxt, csps_co
         # print("="*30)
 
     # print('Test Accuracy (Overall): {0}% ({1}/{2})'.format(count_correct/num_of_data*100, count_correct, num_of_data))
-    # print('Total Time', END_TIME-START_TIME)
+    print('Total Time', END_TIME-START_TIME)
     # print()
-    print(END_TIME-START_TIME)
 
-for i in range(30):
+for index in range(5):
     data, label = next(iter(test_loader))
     data, label = np.array(data), label.tolist()
 
@@ -165,6 +152,8 @@ for i in range(30):
     new_data = torch.Tensor(new_data)
 
     csps_ctxt = encryptor.encrypt(ckks_encoder.encode(new_data, scale))
-    csps_ctxt.save('ctxt/usps_ctxt')
+    # csps_ctxt.save('ctxt/usps_ctxt')
 
+    print('result', index + 1)
     enc_test(evaluator, ckks_encoder, galois_key, relin_keys, csps_ctxt, csps_conv_weights, csps_conv_biases, image_size, paddings, strides, data_size, label)
+    print()

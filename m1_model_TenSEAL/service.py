@@ -6,11 +6,7 @@ import math
 num_of_slot = 8192
 scale = 2**32
 
-def re_depth(encoder, evaluator, relin_keys, ctxt_list, count, _scale):
-    global scale
-
-    scale = _scale
-
+def re_depth(encoder, evaluator, relin_keys, ctxt_list, count):
     result_list = []
     coeff = [1] * num_of_slot
         
@@ -130,9 +126,6 @@ def conv2d_layer_converter_(evaluator, encoder, galois_key, relin_keys, ctxt_lis
                 weight = kernel_list[o][i].flatten()[j].tolist()
                 weight = weight * const_param
                 rotated_ctxt = rotated_ctxt_list[i][j]
-                # if padding > 0 and padding > j:
-                #     weight = [0] * (padding-j) + [weight] * (num_of_slot - (padding-j))
-                # else:
                 weight_list = [weight] + [0] * (stride * tmp_param - 1)
                 weight_list = weight_list * OH
                 weight_list = weight_list + [0]*(input_size * stride * tmp_param - len(weight_list))
@@ -143,7 +136,6 @@ def conv2d_layer_converter_(evaluator, encoder, galois_key, relin_keys, ctxt_lis
                 encoded_coeff = encoder.encode(weight_list, scale) #
                 evaluator.mod_switch_to_inplace(encoded_coeff, rotated_ctxt.parms_id()) #
 
-                # scale is too small
                 try:
                     mult_ctxt = evaluator.multiply_plain(rotated_ctxt, encoded_coeff)
                     evaluator.relinearize_inplace(mult_ctxt, relin_keys)
@@ -153,7 +145,6 @@ def conv2d_layer_converter_(evaluator, encoder, galois_key, relin_keys, ctxt_lis
                 except RuntimeError as e:
                     print("Warning: An error occurred, but it's being ignored:", str(e))
 
-                # mult_ctxt = evaluator.multiply_plain(rotated_ctxt, encoded_coeff)
         result = evaluator.add_many(added_tmp_list)
 
         bias = [bias_list.tolist()[o]]+[0]*(stride * tmp_param - 1)  
@@ -291,7 +282,7 @@ def fc_layer_converter(evaluator, encoder, galois_key, relin_keys, ctxt, weights
         tmp_list.append(evaluator.rotate_vector(a, i*output_size, galois_key))
     all_addition = evaluator.add_many(tmp_list)
     
-    bias_list = bias.tolist() + [0]*(data_size-len(bias.tolist()))  # 변경
+    bias_list = bias.tolist() + [0]*(data_size-len(bias.tolist()))  
     bias_list = bias_list*(num_of_slot//len(bias_list))
 
     sss = encoder.encode(bias_list, all_addition.scale())
@@ -299,11 +290,7 @@ def fc_layer_converter(evaluator, encoder, galois_key, relin_keys, ctxt, weights
     return evaluator.add_plain(all_addition, sss)
 
 def batch_norm_converter(evaluator, encoder, ctxt, running_mean, input_size, running_var, weight, beta, epsilon:float=0.001):
-    param = 1/np.sqrt(running_var + epsilon)
-    # if weight is not None:
-    #     coeff = weight * (num_of_slot//)
-
-
+    param = 1/np.sqrt(running_var + epsilon)    
     temp = evaluator.sub_plain(ctxt, encoder.encode(running_mean * scale_val, scale))
     temp = evaluator.multiply_plain(temp, encoder.encode(param * scale_val, scale))
     temp = evaluator.multiply_plain(temp, encoder.encode(gamma * scale_val, scale))
@@ -436,7 +423,7 @@ def square(evaluator, relin_keys, ctxt_list, const_param):
         return result_list, const_param**2
     else:
         ctxt = ctxt_list
-        result = evaluator.square(ctxt) # ValueError: scale out of bounds
+        result = evaluator.square(ctxt) 
         evaluator.relinearize_inplace(result, relin_keys)
         evaluator.rescale_to_next_inplace(result)
         return result, const_param**2
@@ -478,8 +465,8 @@ def conv1d_layer_converter(evaluator, encoder, galois_key, relin_keys, ctxt_list
 def logistic_regression(evaluator, encoder, galois_key, relin_keys, ctxt, weights, bias_list, rot_interval):
     weights = weights.transpose()
     
-    len_input  = weights.shape[1] # 784
-    len_output   = weights.shape[0] # 10
+    len_input  = weights.shape[1] 
+    len_output   = weights.shape[0]
  
     weights_origin = []
     for idx in range(len_input):
@@ -501,7 +488,6 @@ def logistic_regression(evaluator, encoder, galois_key, relin_keys, ctxt, weight
             tmp_list.append(weights_origin[idx][:(length-idx)] + [0]*(len_output-aa) + weights_origin[idx][(length-idx):])
         weights_origin = tmp_list
     weights_origin = np.array(weights_origin).transpose().tolist()
-    # rot_interval = np.array(weights_origin).transpose().shape[1]
     for idx in range(len_output):
         weight = []
         for i in range(tmp):
@@ -519,7 +505,6 @@ def logistic_regression(evaluator, encoder, galois_key, relin_keys, ctxt, weight
     for d in divisor_set:
         tmp_list2 = []
         for i in range(d):
-            # print(int(i*(M//d)))
             tmp_list2.append(evaluator.rotate_vector(tmp_added_ctxt, i * 10, galois_key))
         tmp_added_ctxt = evaluator.add_many(tmp_list2)
         tmp_list1.append(tmp_added_ctxt)
@@ -537,7 +522,7 @@ def logistic_regression(evaluator, encoder, galois_key, relin_keys, ctxt, weight
 def find_divisor(N):
     divisor_set = []
     m = 2
-    while N != 1:  # N과 m을 나눴을 때 몫이 1이 되면 멈춤.
+    while N != 1: 
         if N % m == 0: 
             divisor_set.append(m)
             N = N // m

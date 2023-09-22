@@ -4,14 +4,12 @@ import numpy as np
 
 from matplotlib import pyplot as plt
 
-# GPU를 사용 가능하면 사용, 없으면 CPU 사용
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 learning_rate = 0.001
 training_epochs = 15
 batch_size = 32
 
-# MNIST 데이터셋 로드 및 전처리
 transform = transforms.Compose([
     transforms.ToTensor(),
     transforms.Normalize((0.5,), (0.5,))
@@ -26,12 +24,9 @@ test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size, s
 print("train dataset:", train_dataset.data.shape)
 print("test dataset :", test_dataset.data.shape)
 
-# 간단한 컨볼루션 신경망(CNN) 모델 정의
 class CNN(torch.nn.Module):
     def __init__(self, hidden=64, output=10):
         super(CNN, self).__init__()
-        # L1 Image shape=(?, 28, 28, 1)
-        #    Conv     -> (?, 9, 9, 8)
         self.Conv1 = torch.nn.Conv2d(in_channels=1, out_channels=8, kernel_size=4, stride=3, padding=0)
         self.FC1 = torch.nn.Linear(9 * 9 * 8, 64)
         self.FC2 = torch.nn.Linear(64, 10)

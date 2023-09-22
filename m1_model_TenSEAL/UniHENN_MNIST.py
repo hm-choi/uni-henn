@@ -18,8 +18,6 @@ import torch.optim as optim
 class CNN(torch.nn.Module):
     def __init__(self, hidden=64, output=10):
         super(CNN, self).__init__()
-        # L1 Image shape=(?, 28, 28, 1)
-        #    Conv     -> (?, 9, 9, 8)
         self.Conv1 = torch.nn.Conv2d(in_channels=1, out_channels=8, kernel_size=4, stride=3, padding=0)
         self.FC1 = torch.nn.Linear(9 * 9 * 8, 64)
         self.FC2 = torch.nn.Linear(64, 10)
@@ -34,7 +32,6 @@ class CNN(torch.nn.Module):
         return x
 
 model_cnn = torch.load('./MNIST_test1.pth', map_location=torch.device('cpu'))
-# print(model_cnn)
 
 conv2d_client = CNN()
 conv2d_client.Conv1.weight.data = model_cnn['Conv1.weight']
@@ -54,14 +51,14 @@ csps_fc_biases.append(model_cnn['FC2.bias'])
 strides = [3]
 paddings = [0]
 
-print()
-print("Conv1.weight:\t", csps_conv_weights[0].shape)
-print("Conv1.bias:\t", csps_conv_biases[0].shape)
-print("FC1.weight:\t", csps_fc_weights[0].shape)
-print("FC1.bias:\t", csps_fc_biases[0].shape)
-print("FC2.weight:\t", csps_fc_weights[1].shape)
-print("FC2.bias:\t", csps_fc_biases[1].shape)
-print()
+# print()
+# print("Conv1.weight:\t", csps_conv_weights[0].shape)
+# print("Conv1.bias:\t", csps_conv_biases[0].shape)
+# print("FC1.weight:\t", csps_fc_weights[0].shape)
+# print("FC1.bias:\t", csps_fc_biases[0].shape)
+# print("FC2.weight:\t", csps_fc_weights[1].shape)
+# print("FC2.bias:\t", csps_fc_biases[1].shape)
+# print()
 
 def enc_test(evaluator, ckks_encoder, galois_key, relin_keys, csps_ctxt, csps_conv_weights, csps_conv_biases, image_size, paddings, strides, data_size, label, scale):
     global labels
@@ -82,45 +79,39 @@ def enc_test(evaluator, ckks_encoder, galois_key, relin_keys, csps_ctxt, csps_co
 
     START_TIME = time.time()
 
-    result = re_depth(ckks_encoder, evaluator, relin_keys, [csps_ctxt], 4, scale)
+    result = re_depth(ckks_encoder, evaluator, relin_keys, [csps_ctxt], 4)
     DEPTH_TIME = time.time()
-    print(DEPTH_TIME - START_TIME)
+    print('DROP DEPTH TIME', DEPTH_TIME - START_TIME)
     depth_time.append(DEPTH_TIME - START_TIME)
 
     result, OH, S, const_param = conv2d_layer_converter_(evaluator, ckks_encoder, galois_key, relin_keys, result, csps_conv_weights[0], csps_conv_biases[0], input_size=image_size, real_input_size=image_size, padding=paddings[0], stride=strides[0], data_size=data_size, const_param=1)
     CHECK_TIME1 = time.time()
-    # print('CONV2D 1 TIME', CHECK_TIME1-START_TIME)
-    print(CHECK_TIME1-DEPTH_TIME)
+    print('CONV2D 1 TIME', CHECK_TIME1-START_TIME)
     convs[0].append(CHECK_TIME1-DEPTH_TIME)
 
     result, const_param = square(evaluator, relin_keys, result, const_param=const_param)
     CHECK_TIME2 = time.time()
-    # print('SQ 1 TIME', CHECK_TIME2-CHECK_TIME1)
-    print(CHECK_TIME2-CHECK_TIME1)
+    print('SQ 1 TIME', CHECK_TIME2-CHECK_TIME1)
     sqs[0].append(CHECK_TIME2-CHECK_TIME1)
 
     result = flatten(evaluator, ckks_encoder, galois_key, relin_keys, result, OH, OH, S, input_size=image_size, data_size=data_size, const_param=const_param)
     CHECK_TIME3 = time.time()
-    # print('FLATTEN TIME', CHECK_TIME3-CHECK_TIME2)
-    print(CHECK_TIME3-CHECK_TIME2)
+    print('FLATTEN TIME', CHECK_TIME3-CHECK_TIME2)
     flattens.append(CHECK_TIME3-CHECK_TIME2)
 
     result = fc_layer_converter(evaluator, ckks_encoder, galois_key, relin_keys, result, csps_fc_weights[0], csps_fc_biases[0], data_size=data_size)
     CHECK_TIME4 = time.time()
-    # print('FC1 TIME', CHECK_TIME4-CHECK_TIME3)
-    print(CHECK_TIME4-CHECK_TIME3)
+    print('FC1 TIME', CHECK_TIME4-CHECK_TIME3)
     fcs[0].append(CHECK_TIME4-CHECK_TIME3)
 
     result, const_param = square(evaluator, relin_keys, result, const_param=1)
     CHECK_TIME5 = time.time()
-    # print('SQ 2 TIME', CHECK_TIME5-CHECK_TIME4)
-    print(CHECK_TIME5-CHECK_TIME4)
+    print('SQ 2 TIME', CHECK_TIME5-CHECK_TIME4)
     sqs[1].append(CHECK_TIME5-CHECK_TIME4)
 
     result = fc_layer_converter(evaluator, ckks_encoder, galois_key,relin_keys, result, csps_fc_weights[1], csps_fc_biases[1], data_size=data_size)
     END_TIME = time.time()
-    # print('FC2 TIME', END_TIME-CHECK_TIME5)
-    print(END_TIME-CHECK_TIME5)
+    print('FC2 TIME', END_TIME-CHECK_TIME5)
     fcs[1].append(END_TIME-CHECK_TIME5)
 
     # count_correct = 0
@@ -141,7 +132,7 @@ def enc_test(evaluator, ckks_encoder, galois_key, relin_keys, csps_ctxt, csps_co
     #         count_correct += 1
 
     # print('Test Accuracy (Overall): {0}% ({1}/{2})'.format(count_correct/num_of_data*100, count_correct, num_of_data))
-    # print('Total Time', END_TIME-START_TIME)
+    print('Total Time', END_TIME-START_TIME)
     # print(END_TIME-START_TIME)
     totals.append(END_TIME-START_TIME)
     # print()
@@ -185,7 +176,7 @@ poly_modulus_degree = 8192*2
 parms.set_poly_modulus_degree(poly_modulus_degree)
 bits_scale1 = 40
 # bits_scale2 = 32
-for bits_scale2 in [23]:
+for bits_scale2 in [32]:
     depth = 11
     coeff_mod_bit_sizes = [bits_scale1] + [bits_scale2]*depth + [bits_scale1]
     parms.set_coeff_modulus(CoeffModulus.Create(poly_modulus_degree, coeff_mod_bit_sizes))
@@ -194,7 +185,6 @@ for bits_scale2 in [23]:
     context = SEALContext(parms)
     ckks_encoder = CKKSEncoder(context)
     slot_count = ckks_encoder.slot_count()
-    print(f'Number of slots: {slot_count}') # 8192
     
     keygen = KeyGenerator(context)
     public_key = keygen.create_public_key()
@@ -243,8 +233,6 @@ for bits_scale2 in [23]:
     #     he_values.append([])
     #     error_values.append([])
 
-    print(data_size, num_of_data, bits_scale2)
-
     transform = transforms.Compose([
         transforms.ToTensor(),
         transforms.Normalize((0.5,), (0.5,))
@@ -253,7 +241,7 @@ for bits_scale2 in [23]:
     test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=num_of_data, shuffle=True, drop_last=True)
 
     import pandas as pd
-    for index in range(30):
+    for index in range(5):
         data, _label = next(iter(test_loader))
         data, _label = np.array(data), _label.tolist()
 
@@ -267,9 +255,10 @@ for bits_scale2 in [23]:
         ctxt = encryptor.encrypt(ckks_encoder.encode(new_data, scale))
         # ctxt.save('ctxt/mnist_ctxt')
 
+        print('result', index+1)
         enc_test(evaluator, ckks_encoder, galois_key, relin_keys, ctxt, csps_conv_weights, csps_conv_biases, image_size, paddings, strides, data_size, _label, scale)
-
-        # for _ in range(10):
+        print()
+        
         labels.append(index+1)
         df = pd.DataFrame(labels, columns=["label"])
         df["DEPTH"] = depth_time
