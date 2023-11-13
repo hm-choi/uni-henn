@@ -56,6 +56,7 @@ def enc_test(evaluator, ckks_encoder, galois_key, relin_keys, csps_ctxt, csps_co
 
     result = re_depth(ckks_encoder, evaluator, relin_keys, [csps_ctxt], 4)
     DEPTH_TIME = time.time()
+
     print('DROP DEPTH TIME\t%.3f' %(DEPTH_TIME - START_TIME))
 
     result, OH, S, const_param = conv2d_layer_converter_(evaluator, ckks_encoder, galois_key, relin_keys, result, csps_conv_weights[0], csps_conv_biases[0], input_size=image_size, real_input_size=image_size, padding=paddings[0], stride=strides[0], data_size=data_size, const_param=1)
@@ -85,7 +86,7 @@ def enc_test(evaluator, ckks_encoder, galois_key, relin_keys, csps_ctxt, csps_co
 
     print('Total Time\t%.3f sec' %(END_TIME-START_TIME))
     print()
-
+    
     for i in range(num_of_data):
         max_data_idx = -1
         dataList = conv2d_client(data)[i].flatten().tolist()
