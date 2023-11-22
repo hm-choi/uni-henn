@@ -6,6 +6,10 @@ import math
 num_of_slot = 8192
 scale = 2**32
 
+# ReDEPTH
+# The function reduces the multiplication depth to meet the depth that is needed in the test
+# Even though the same operation (addition, multiplication, and rotation, etc) is used, 
+# more operation time is consumed when the depth is large.
 def re_depth(encoder, evaluator, relin_keys, ctxt_list, count):
     result_list = []
     coeff = [1] * num_of_slot
@@ -20,6 +24,8 @@ def re_depth(encoder, evaluator, relin_keys, ctxt_list, count):
         result_list.append(ctxt)
     return result_list
 
+# CalculateDataSize
+# The function is used to calculate the largest layer length of the CNN model.
 def calculate_data_size(image_size, csps_conv_weights, csps_fc_weights, strides, paddings):
     data_size = image_size**2
     OH = image_size
@@ -44,6 +50,8 @@ def calculate_data_size(image_size, csps_conv_weights, csps_fc_weights, strides,
 
     return data_size
 
+# AveragePoolingLayerConverter
+# This function calculates the average pooling operation of the input data.
 def average_pooling_layer_converter(evaluator, encoder, galois_key, relin_keys, ctxt_list, kernel_size, input_size, real_input_size, padding, stride, tmp_param, data_size, const_param):
     result_list = []
     rotated_ctxt_list = []
@@ -68,7 +76,7 @@ def average_pooling_layer_converter(evaluator, encoder, galois_key, relin_keys, 
         result = evaluator.add_many(added_tmp_list)
         result_list.append(result)
     return result_list, OH, tmp_param*stride, const_param/(kernel_size**2)
-
+ 
 def conv2d_layer_converter_(evaluator, encoder, galois_key, relin_keys, ctxt_list, kernel_list, bias_list, input_size:int=28, real_input_size:int=28, padding:int=0, stride:int=2, tmp_param:int=1, data_size:int=400, const_param:int=1):
     len_output  = kernel_list.shape[0]
     len_input   = kernel_list.shape[1]
@@ -129,6 +137,8 @@ def conv2d_layer_converter_(evaluator, encoder, galois_key, relin_keys, ctxt_lis
 
     return result_list, OH, tmp_param*stride, 1
 
+# Flatten
+# The function is used to concatenate between the convolution layer and the fully connected layer.
 def flatten(evaluator, encoder, galois_key, relin_keys, ctxt_list, OW:int, OH:int, tmp:int, input_size:int=28, data_size:int=400, const_param:int=1):
     if const_param != 1:
         gather_ctxt_list = []
@@ -215,6 +225,8 @@ def flatten(evaluator, encoder, galois_key, relin_keys, ctxt_list, OW:int, OH:in
         result_list.append(evaluator.rotate_vector(result, (-1)*o*OW*OH,galois_key))
     return evaluator.add_many(result_list)
 
+# FCLayerConverter
+# The function offers a HE-based fully connected layer operation with input ciphertext.
 def fc_layer_converter(evaluator, encoder, galois_key, relin_keys, ctxt, weights, bias, data_size:int=400):
     input_size = weights.shape[1] 
     output_size = weights.shape[0] 
@@ -257,6 +269,8 @@ def fc_layer_converter(evaluator, encoder, galois_key, relin_keys, ctxt, weights
     evaluator.mod_switch_to_inplace(sss, all_addition.parms_id())
     return evaluator.add_plain(all_addition, sss)
 
+# ApproximateReLUConverter
+# The function offers a HE-based ReLU operation of the input ciphertexts. 
 def approximated_ReLU_converter(evaluator, encoder, input_size, real_size, relin_keys, ctxt_list, _type=0, const_param=1):
     coeff1 = [0.117071 * (const_param**2)]*real_size + [0]*(input_size-real_size)
     coeff1 = coeff1 *(num_of_slot//len(coeff1))
@@ -334,6 +348,8 @@ def rotate_in_subspace(evaluator, encoder, galois_key, relin_keys, result_list:l
         evaluator.rescale_to_next_inplace(result2)
         result_list.append(result2)
 
+# Square
+# The function offers a HE-based square operation of the input ciphertexts.
 def square(evaluator, relin_keys, ctxt_list, const_param):
     if type(ctxt_list) == list:
         result_list = []
