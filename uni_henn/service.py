@@ -6,11 +6,21 @@ import math
 num_of_slot = 8192
 scale = 2**32
 
-# ReDEPTH
-# The function reduces the multiplication depth to meet the depth that is needed in the test
-# Even though the same operation (addition, multiplication, and rotation, etc) is used, 
-# more operation time is consumed when the depth is large.
 def re_depth(encoder, evaluator, relin_keys, ctxt_list, count):
+    """
+    The function reduces the multiplication depth to meet the depth that is needed in the test.
+    Even though the same operation (addition, multiplication, and rotation, etc) is used, 
+    more operation time is consumed when the depth is large.
+
+    Args:
+        - encoder: CKKS Encoder in the SEAL-Python library
+        - evaluator: CKKS Evaluator in the SEAL-Python library
+        - relin_keys: Re-linearization key of CKKS scheme in the SEAL-Python library
+        - ctxt_list: List of the ciphertexts that want to reduce the depth
+        - count: The number want to set as the depth
+    Returns:
+        - data_size: List of the ciphertexts with depth count
+    """
     result_list = []
     coeff = [1] * num_of_slot
         
@@ -24,9 +34,20 @@ def re_depth(encoder, evaluator, relin_keys, ctxt_list, count):
         result_list.append(ctxt)
     return result_list
 
-# CalculateDataSize
-# The function is used to calculate the largest layer length of the CNN model.
 def calculate_data_size(image_size, csps_conv_weights, csps_fc_weights, strides, paddings):
+    """
+    The function is used to calculate the largest layer length of the CNN model.
+
+    Args:
+        - image_size: Input image size
+        - csps_conv_weights: Weight set of the convolutional layer
+        - csps_fc_weights: Weight set of the fully connected layer
+        - strides: Stride of convolutional layer
+        - paddings: The padding size
+    Returns:
+        - data_size: The maximum data size from the total layers
+    """
+    
     data_size = image_size**2
     OH = image_size
 
@@ -50,9 +71,25 @@ def calculate_data_size(image_size, csps_conv_weights, csps_fc_weights, strides,
 
     return data_size
 
-# AveragePoolingLayerConverter
-# This function calculates the average pooling operation of the input data.
-def average_pooling_layer_converter(evaluator, encoder, galois_key, relin_keys, ctxt_list, kernel_size, input_size, real_input_size, padding, stride, tmp_param, data_size, const_param):
+def average_pooling_layer_converter(evaluator, galois_key, ctxt_list, kernel_size, input_size, real_input_size, padding, stride, tmp_param, const_param):
+    """
+    This function calculates the average pooling operation of the input data.
+    
+    Args:
+        - evaluator : CKKS Evaluator in the SEAL-Python library
+        - galois_key : CKKS galois key in the SEAL-Python library
+        - ctxt_list : Input ciphertexts list
+        - kernel_size : The kernel size 
+        - input_size : The input image size (flattened length)
+        - real_input_size : The input size that is removed the thresh values
+        - padding : The padding size
+        - stride : The stride
+        - tmp_param :
+        - const_param :
+
+    Returns:
+        - :
+    """
     result_list = []
     rotated_ctxt_list = []
     len_ctxt = len(ctxt_list)
@@ -138,8 +175,25 @@ def conv2d_layer_converter_(evaluator, encoder, galois_key, relin_keys, ctxt_lis
     return result_list, OH, tmp_param*stride, 1
 
 # Flatten
-# The function is used to concatenate between the convolution layer and the fully connected layer.
 def flatten(evaluator, encoder, galois_key, relin_keys, ctxt_list, OW:int, OH:int, tmp:int, input_size:int=28, data_size:int=400, const_param:int=1):
+    """
+    The function is used to concatenate between the convolution layer and the fully connected layer.
+
+    Args:
+        - evaluator : CKKS Evaluator in the SEAL-Python library
+        - encoder : CKKS Encoder in the SEAL-Python library
+        - galois_key : CKKS galois key in the SEAL-Python library
+        - relin_keys : CKKS re-linearlization key in the SEAL-Python library
+        - ctxt_list : The input ciphertexts list
+        - OW : Width of the input data
+        - OH : Height of the input data
+        - tmp : 
+        - input_size : 
+        - data_size : 
+        - const_param : 
+    Returns:
+        - result : The output of the flattened result of the input ciphertexts list.
+    """
     if const_param != 1:
         gather_ctxt_list = []
         for ctxt in ctxt_list:
@@ -226,8 +280,22 @@ def flatten(evaluator, encoder, galois_key, relin_keys, ctxt_list, OW:int, OH:in
     return evaluator.add_many(result_list)
 
 # FCLayerConverter
-# The function offers a HE-based fully connected layer operation with input ciphertext.
 def fc_layer_converter(evaluator, encoder, galois_key, relin_keys, ctxt, weights, bias, data_size:int=400):
+    """
+    The function offers a HE-based fully connected layer operation with input ciphertext.
+
+    Args:
+        - evaluator : CKKS Evaluator in the SEAL-Python library
+        - encoder : CKKS Encoder in the SEAL-Python library
+        - galois_key : CKKS galois key in the SEAL-Python library
+        - relin_keys : CKKS re-linearlization key in the SEAL-Python library
+        - ctxt : Input ciphertext
+        - weights : The weight of the FC layer
+        - bias : The bias of the FC layer
+        - data_size : The data size
+    Returns:
+        - result : The out of the FC layer of input ctxt
+    """
     input_size = weights.shape[1] 
     output_size = weights.shape[0] 
     weights_origin = []
@@ -270,8 +338,22 @@ def fc_layer_converter(evaluator, encoder, galois_key, relin_keys, ctxt, weights
     return evaluator.add_plain(all_addition, sss)
 
 # ApproximateReLUConverter
-# The function offers a HE-based ReLU operation of the input ciphertexts. 
 def approximated_ReLU_converter(evaluator, encoder, input_size, real_size, relin_keys, ctxt_list, _type=0, const_param=1):
+    """
+    The function offers a HE-based ReLU operation of the input ciphertexts.
+
+    Args:
+        - evaluator : CKKS Evaluator in the SEAL-Python library
+        - encoder : CKKS Encoder in the SEAL-Python library
+        - input_size : Input data size
+        - real_size : The real data size that is removed the thresh values.
+        - relin_keys : CKKS re-linearlization key in the SEAL-Python library
+        - ctxt_list : Input ciphertexts list
+        - _type :
+        - const_param :
+    Returns:
+        - Applied result of the approximated ReLU
+    """
     coeff1 = [0.117071 * (const_param**2)]*real_size + [0]*(input_size-real_size)
     coeff1 = coeff1 *(num_of_slot//len(coeff1))
 
@@ -317,6 +399,9 @@ def approximated_ReLU_converter(evaluator, encoder, input_size, real_size, relin
         raise Exception('The type is not appropriated')
 
 def rotate_in_subspace(evaluator, encoder, galois_key, relin_keys, result_list:list, weight, ctxt, rot_n:int, interval_len:int, num_of_slots:int=num_of_slot, data_size:int=400):
+    """
+    The function is used in the FC Layer
+    """
     if rot_n > interval_len or interval_len < 1:
         raise Exception('')
     
@@ -349,8 +434,20 @@ def rotate_in_subspace(evaluator, encoder, galois_key, relin_keys, result_list:l
         result_list.append(result2)
 
 # Square
-# The function offers a HE-based square operation of the input ciphertexts.
 def square(evaluator, relin_keys, ctxt_list, const_param):
+    """
+    The function offers a HE-based square operation of the input ciphertexts.
+    
+    Args:
+        - evaluator : CKKS Evaluator in the SEAL-Python library
+        - relin_keys : CKKS re-linearlization key in the SEAL-Python library
+        - ctxt_list : Input ciphertexts list
+        - const_param : 
+
+    Returns:
+        - result : Squared result ciphertexts list
+        - const_param**2
+    """
     if type(ctxt_list) == list:
         result_list = []
         for ctxt in ctxt_list:
