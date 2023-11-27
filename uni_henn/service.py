@@ -84,8 +84,8 @@ def average_pooling_layer_converter(evaluator, galois_key, ctxt_list, kernel_siz
         - real_input_size : The input size that is removed the thresh values
         - padding : The padding size
         - stride : The stride
-        - tmp_param :
-        - const_param :
+        - tmp_param : The parameter used in the average pooling layer
+        - const_param : The constant in the average pooling layer
 
     Returns:
         - :
@@ -187,10 +187,10 @@ def flatten(evaluator, encoder, galois_key, relin_keys, ctxt_list, OW:int, OH:in
         - ctxt_list : The input ciphertexts list
         - OW : Width of the input data
         - OH : Height of the input data
-        - tmp : 
-        - input_size : 
-        - data_size : 
-        - const_param : 
+        - tmp : This is used for temp params
+        - input_size : The input data size
+        - data_size : The real data size 
+        - const_param : The parameter in flatten layer
     Returns:
         - result : The output of the flattened result of the input ciphertexts list.
     """
@@ -349,8 +349,8 @@ def approximated_ReLU_converter(evaluator, encoder, input_size, real_size, relin
         - real_size : The real data size that is removed the thresh values.
         - relin_keys : CKKS re-linearlization key in the SEAL-Python library
         - ctxt_list : Input ciphertexts list
-        - _type :
-        - const_param :
+        - _type : The type is used for choosing approximate ReLU type
+        - const_param : The constant parameter in approximate ReLU
     Returns:
         - Applied result of the approximated ReLU
     """
@@ -442,11 +442,11 @@ def square(evaluator, relin_keys, ctxt_list, const_param):
         - evaluator : CKKS Evaluator in the SEAL-Python library
         - relin_keys : CKKS re-linearlization key in the SEAL-Python library
         - ctxt_list : Input ciphertexts list
-        - const_param : 
+        - const_param : The constant parameter in square function
 
     Returns:
         - result : Squared result ciphertexts list
-        - const_param**2
+        - const_param**2 : Square of the const_param
     """
     if type(ctxt_list) == list:
         result_list = []
