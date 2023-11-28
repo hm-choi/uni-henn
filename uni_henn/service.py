@@ -22,13 +22,12 @@ def re_depth(encoder, evaluator, relin_keys, C_in, count):
         - C_out: List of the ciphertexts after reducing the depth
     """
     C_out = []
-    V = [1] * N     # vector filled with 1
         
     for C_in_i in C_in:
         for _ in range(count):
-            C_V = encoder.encode(V, q)
-            evaluator.mod_switch_to_inplace(C_V, C_in_i.parms_id())
-            C_out_i = evaluator.multiply_plain(C_in_i, C_V)
+            Plaintext = encoder.encode([1] * N, q)
+            evaluator.mod_switch_to_inplace(Plaintext, C_in_i.parms_id())
+            C_out_i = evaluator.multiply_plain(C_in_i, Plaintext)
             evaluator.relinearize_inplace(C_out_i, relin_keys)
             evaluator.rescale_to_next_inplace(C_out_i)
         C_out.append(C_out_i)
@@ -43,9 +42,9 @@ def calculate_data_size(image_size, csps_conv_weights, csps_fc_weights, strides,
         - csps_conv_weights: Weight set of the convolutional layer
         - csps_fc_weights: Weight set of the fully connected layer
         - strides: Stride of convolutional layer
-        - paddings: The padding size
+        - paddings: Padding size
     Returns:
-        - data_size: The maximum data size from the total layers
+        - data_size: Maximum data size from the total layers
     """
     data_size = image_size**2
     OH = image_size
@@ -83,7 +82,7 @@ def average_pooling_layer_converter(evaluator, galois_key, C_in, K, Img, In, P, 
         - In : Size of input data that is removed the invalid values
         - P : Padding size
         - S : Stride value
-        - I_in : Interval value between valid data
+        - I_in : Interval value between valid data before average pooling layer
         - const : Value to be multiplied by C_in before average pooling layer
 
     Returns:
@@ -117,67 +116,90 @@ def average_pooling_layer_converter(evaluator, galois_key, C_in, K, Img, In, P, 
 
     return C_out, Out, I_out, const/(K**2)
  
-def conv2d_layer_converter_(evaluator, encoder, galois_key, relin_keys, ctxt_list, Ker, bias_list, input_size:int=28, real_input_size:int=28, padding:int=0, stride:int=2, tmp_param:int=1, data_size:int=400, const_param:int=1):
-    len_output  = Ker.shape[0]
-    len_input   = Ker.shape[1]
-    kernel_size = Ker.shape[2]
-    result_list = []
-    rotated_ctxt_list = []
-    OH = (real_input_size + padding * 2 - kernel_size)//stride + 1
-
-    for i in range(len_input):
-        ctxt = ctxt_list[i]
-        tmp_list = []
-        for k1 in range(kernel_size):
-            for k2 in range(kernel_size):
-                rot_val = tmp_param * (k2 + input_size * k1)
-                rotated_ctxt = evaluator.rotate_vector(ctxt, rot_val, galois_key)
-                tmp_list.append(rotated_ctxt)
-        rotated_ctxt_list.append(tmp_list)
+def conv2d_layer_converter_(evaluator, encoder, galois_key, relin_keys, C_in, Ker, B, Img, In, P, S, I_in, data_size, const:int=1):
+    """
+    This function calculates the 2D convolution operation of the input data.
     
-    for o in range(len_output):
-        added_tmp_list = []
-        for i in range(len_input):
-            for j in range(len(rotated_ctxt_list[i])):
-                weight = Ker[o][i].flatten()[j].tolist()
-                weight = weight * const_param
-                rotated_ctxt = rotated_ctxt_list[i][j]
-                weight_list = [weight] + [0] * (stride * tmp_param - 1)
-                weight_list = weight_list * OH
-                weight_list = weight_list + [0]*(input_size * stride * tmp_param - len(weight_list))
-                weight_list = weight_list * OH
-                weight_list = weight_list + [0]*(data_size - len(weight_list))
-                weight_list = weight_list * (N//len(weight_list))
-                
-                encoded_coeff = encoder.encode(weight_list, q) #
-                evaluator.mod_switch_to_inplace(encoded_coeff, rotated_ctxt.parms_id()) #
+    Args:
+        - evaluator : CKKS Evaluator in the SEAL-Python library
+        - encoder : CKKS Encoder in the SEAL-Python library
+        - galois_key : CKKS galois key in the SEAL-Python library
+        - relin_keys: Re-linearization key of CKKS scheme in the SEAL-Python library
+        - C_in : Input ciphertexts list
+        - Ker : Kernel weight (shape : CH_out * CH_in * K * K)
+        - B : Bias value (shape : CH_out)
+        - Img : Size of used image data (flattened length)
+        - In : Size of input data that is removed the invalid values
+        - P : Padding size
+        - S : Stride value
+        - I_in : Interval value between valid data before conv2d layer
+        - data_size : Maximum data size from the total layers
+        - const : Value to be multiplied by C_in before conv2d layer
 
-                try:
-                    mult_ctxt = evaluator.multiply_plain(rotated_ctxt, encoded_coeff)
-                    evaluator.relinearize_inplace(mult_ctxt, relin_keys)
-                    evaluator.rescale_to_next_inplace(mult_ctxt)
+    Returns:
+        - C_out : Output ciphertexts list
+        - Out : Size of output data that is removed the invalid  values
+        - I_out : Interval value between valid data after average pooling layer
+        - 1 : Value to be multiplied by C_out after conv2d layer (= 1)
+    """
+        
+    CH_out  = Ker.shape[0]
+    CH_in   = Ker.shape[1]
+    K       = Ker.shape[2]
 
-                    added_tmp_list.append(mult_ctxt)
-                except RuntimeError as e:
-                    print("Warning: An error occurred, but it's being ignored:", str(e))
+    C_out = []
+    Out = (In + P * 2 - K)//S + 1
+    I_out = I_in * S
 
-        result = evaluator.add_many(added_tmp_list)
+    C_rot = []
 
-        bias = [bias_list.tolist()[o]]+[0]*(stride * tmp_param - 1)  
-        bias = bias * OH
-        bias = bias + [0] * (input_size * stride * tmp_param - len(bias))
-        bias = bias * OH
-        bias = bias + [0] * (data_size - len(bias))
-        bias = bias * (N//len(bias)) 
+    for i in range(CH_in):
+        C_rot.append([])
+        for p in range(K):
+            C_rot[i].append([])
+            for q in range(K):
+                Ciphertext = evaluator.rotate_vector(C_in[i], I_in * (q + Img * p), galois_key)
+                C_rot[i][p].append(Ciphertext)
+    
+    for o in range(CH_out):
+        Ciphertexts = []
+        for i in range(CH_in):
+            for p in range(K):
+                for q in range(K):
+                    V_ker = [Ker.tolist()[o][i][p][q] * const] + [0] * (I_out - 1)
+                    V_ker = V_ker * Out + [0] * ((Img - Out) * I_out)
+                    V_ker = V_ker * Out + [0] * (data_size - Img * I_out * Out)
+                    V_ker = V_ker * (N // data_size)
 
-        encoded_bias = encoder.encode(bias, result.scale())
-        evaluator.mod_switch_to_inplace(encoded_bias, result.parms_id())
-        result = evaluator.add_plain(result, encoded_bias)
-        result_list.append(result)
+                    Plaintext_ker = encoder.encode(V_ker, q)
+                    evaluator.mod_switch_to_inplace(Plaintext_ker, C_rot[i][p][q].parms_id())
 
-    return result_list, OH, tmp_param*stride, 1
+                    """
+                    This try-catch part is handling exceptions for errors that occur when multiplying the vector of 0.
+                    """
+                    try:
+                        Ciphertext = evaluator.multiply_plain(C_rot[i][p][q], Plaintext_ker)
+                        evaluator.relinearize_inplace(Ciphertext, relin_keys)
+                        evaluator.rescale_to_next_inplace(Ciphertext)
 
-# Flatten
+                        Ciphertexts.append(Ciphertext)
+                    except RuntimeError as e:
+                        print("Warning: An error occurred, but it's being ignored:", str(e))
+        
+        C_out_o = evaluator.add_many(Ciphertexts)
+
+        V_bias = [B.tolist()[o]] + [0] * (I_out - 1)  
+        V_bias = V_bias * Out + [0] * ((Img - Out) * I_out)
+        V_bias = V_bias * Out + [0] * (data_size - Img * I_out * Out)
+        V_bias = V_bias * (N // data_size) 
+
+        Plaintext_bias = encoder.encode(V_bias, C_out_o.scale())
+        evaluator.mod_switch_to_inplace(Plaintext_bias, C_out_o.parms_id())
+        C_out_o = evaluator.add_plain(C_out_o, Plaintext_bias)
+        C_out.append(C_out_o)
+
+    return C_out, Out, I_out, 1
+
 def flatten(evaluator, encoder, galois_key, relin_keys, ctxt_list, OW:int, OH:int, tmp:int, input_size:int=28, data_size:int=400, const_param:int=1):
     """
     The function is used to concatenate between the convolution layer and the fully connected layer.
