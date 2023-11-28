@@ -35,6 +35,8 @@ We use MNIST, CIFAR10, and USPS datasets for 2D CNN models which can be download
 
 ## HE Parameters
 We use the Cheon-Kim-Kim-Song(CKKS) scheme following parameter settings:
+|Parameter|Value|
+|---|---|
 |\# of slots|8,192|
 |log Q|432|
 |PK(MB)|1.87|
