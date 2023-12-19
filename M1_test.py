@@ -1,5 +1,5 @@
 from uni_henn.service import *
-from seal import *
+# from seal import *
 from torchvision import datasets, transforms
 import numpy as np
 import torch
