@@ -1,10 +1,10 @@
-# from seal import *
+from seal import *
 import numpy as np
 import time
 import math
 
 N = 8192    # Number of slots of ciphertext in pW_iner of 2
-q = 2**32   # Scale value used in polynomial quotient ring
+scale = 2**32   # Scale value used in polynomial quotient ring
 
 def re_depth(encoder, evaluator, relin_keys, C_in, count):
     """
@@ -23,15 +23,15 @@ def re_depth(encoder, evaluator, relin_keys, C_in, count):
         - C_out: List of the ciphertexts after reducing the depth
     """
     C_out = []
-        
-    for C_in_i in C_in:
+    
+    for C in C_in:
         for _ in range(count):
-            Plaintext = encoder.encode([1] * N, q)
-            evaluator.mod_switch_to_inplace(Plaintext, C_in_i.parms_id())
-            C_out_i = evaluator.multiply_plain(C_in_i, Plaintext)
-            evaluator.relinearize_inplace(C_out_i, relin_keys)
-            evaluator.rescale_to_next_inplace(C_out_i)
-        C_out.append(C_out_i)
+            Plaintext = encoder.encode([1] * N, scale)
+            evaluator.mod_switch_to_inplace(Plaintext, C.parms_id())
+            C = evaluator.multiply_plain(C, Plaintext)
+            evaluator.relinearize_inplace(C, relin_keys)
+            evaluator.rescale_to_next_inplace(C)
+        C_out.append(C)
     return C_out
 
 def calculate_data_size(image_size, csps_conv_weights, csps_fc_weights, strides, paddings):
@@ -160,36 +160,38 @@ def conv2d_layer_converter_(evaluator, encoder, galois_key, relin_keys, C_in, Ke
         for p in range(K):
             C_rot[i].append([])
             for q in range(K):
-                Ciphertext = evaluator.rotate_vector(C_in[i], I_in * (q + Img * p), galois_key)
-                C_rot[i][p].append(Ciphertext)
+                C = evaluator.rotate_vector(C_in[i], I_in * (q + Img * p), galois_key)
+                C_rot[i][p].append(C)
     
     for o in range(CH_out):
-        Ciphertexts = []
+        C_outs = []
         for i in range(CH_in):
             for p in range(K):
                 for q in range(K):
+                    """Vector of kernel"""
                     V_ker = [Ker.tolist()[o][i][p][q] * Const] + [0] * (I_out - 1)
                     V_ker = V_ker * Out + [0] * ((Img - Out) * I_out)
                     V_ker = V_ker * Out + [0] * (Data_size - Img * I_out * Out)
                     V_ker = V_ker * (N // Data_size)
 
-                    Plaintext_ker = encoder.encode(V_ker, q)
+                    Plaintext_ker = encoder.encode(V_ker, scale)
                     evaluator.mod_switch_to_inplace(Plaintext_ker, C_rot[i][p][q].parms_id())
 
                     """
                     This try-catch part is handling exceptions for errors that occur when multiplying the vector of 0.
                     """
                     try:
-                        Ciphertext = evaluator.multiply_plain(C_rot[i][p][q], Plaintext_ker)
-                        evaluator.relinearize_inplace(Ciphertext, relin_keys)
-                        evaluator.rescale_to_next_inplace(Ciphertext)
+                        C = evaluator.multiply_plain(C_rot[i][p][q], Plaintext_ker)
+                        evaluator.relinearize_inplace(C, relin_keys)
+                        evaluator.rescale_to_next_inplace(C)
 
-                        Ciphertexts.append(Ciphertext)
+                        C_outs.append(C)
                     except RuntimeError as e:
                         print("Warning: An error occurred, but it's being ignored:", str(e))
         
-        C_out_o = evaluator.add_many(Ciphertexts)
+        C_out_o = evaluator.add_many(C_outs)
 
+        """Vector of bias"""            
         V_bias = [B.tolist()[o]] + [0] * (I_out - 1)  
         V_bias = V_bias * Out + [0] * ((Img - Out) * I_out)
         V_bias = V_bias * Out + [0] * (Data_size - Img * I_out * Out)
@@ -202,7 +204,7 @@ def conv2d_layer_converter_(evaluator, encoder, galois_key, relin_keys, C_in, Ke
 
     return C_out, Out, I_out, 1
 
-def flatten(evaluator, encoder, galois_key, relin_keys, C_in, W_in:int, H_in:int, S_total:int, In:int=28, Data_size:int=400, Const:int=1):
+def flatten(evaluator, encoder, galois_key, relin_keys, C_in, W_in:int, H_in:int, S_total:int, Img:int=28, Data_size:int=400, Const:int=1):
     """
     The function is used to concatenate between the convolution layer and the fully connected layer.
 
@@ -213,8 +215,8 @@ def flatten(evaluator, encoder, galois_key, relin_keys, C_in, W_in:int, H_in:int
         - relin_keys: CKKS re-linearlization key in the SEAL-Python library
         - C_in : Input ciphertexts list
         - W_in, H_in: Width and height of input data that is removed the invalid values
-        - S_total: This is used for temp params
-        - In: Size of input data that is removed the invalid values
+        - S_total: The value is the product of each convolutional layer’s stride and the kernel sizes of all average pooling layers
+        - Img: Size of input data that is removed the invalid values
         - Data_size: The real data size 
         - Const: Value to be multiplied by C_in before layer
 
@@ -226,7 +228,7 @@ def flatten(evaluator, encoder, galois_key, relin_keys, C_in, W_in:int, H_in:int
         for ctxt in C_in:
             tmp_list = []
 
-            coeff = [Const] + [0]*(In * S_total - 1)
+            coeff = [Const] + [0]*(Img * S_total - 1)
             coeff = coeff * H_in
             coeff = coeff + [0] * (Data_size - len(coeff))
             coeff = coeff * (N // Data_size)
@@ -234,7 +236,7 @@ def flatten(evaluator, encoder, galois_key, relin_keys, C_in, W_in:int, H_in:int
 
             for i in range(H_in):
                 rot_coeff = np.roll(coeff, S_total * i).tolist()
-                encoded_coeff = encoder.encode(rot_coeff, q)
+                encoded_coeff = encoder.encode(rot_coeff, scale)
                 evaluator.mod_switch_to_inplace(encoded_coeff, ctxt.parms_id())
                 mult_ctxt = evaluator.multiply_plain(ctxt, encoded_coeff)
                 evaluator.relinearize_inplace(mult_ctxt, relin_keys)
@@ -259,7 +261,7 @@ def flatten(evaluator, encoder, galois_key, relin_keys, C_in, W_in:int, H_in:int
         for ctxt in rotated_C_in:
             tmp_list = []
 
-            coeff = [1]*S_total + [0]*((In - 1) * S_total)
+            coeff = [1]*S_total + [0]*((Img - 1) * S_total)
             coeff = coeff * H_in
             coeff = coeff + [0] * (Data_size - len(coeff))
             coeff = coeff * (N // Data_size)
@@ -267,7 +269,7 @@ def flatten(evaluator, encoder, galois_key, relin_keys, C_in, W_in:int, H_in:int
             num_rot = math.ceil(H_in / S_total)
             for i in range(num_rot):
                 rot_coeff = np.roll(coeff, S_total**2 * i).tolist()
-                encoded_coeff = encoder.encode(rot_coeff, q)
+                encoded_coeff = encoder.encode(rot_coeff, scale)
                 evaluator.mod_switch_to_inplace(encoded_coeff, ctxt.parms_id())
                 mult_ctxt = evaluator.multiply_plain(ctxt, encoded_coeff)
                 evaluator.relinearize_inplace(mult_ctxt, relin_keys)
@@ -291,15 +293,15 @@ def flatten(evaluator, encoder, galois_key, relin_keys, C_in, W_in:int, H_in:int
             for i in range(H_in):
                 coeff = [1]*H_in + [0]*(Data_size - H_in)
                 coeff = np.array(coeff * (N//len(coeff)))
-                coeff = np.roll(coeff, In * S_total * i)
+                coeff = np.roll(coeff, Img * S_total * i)
 
-                encoded_coeff = encoder.encode(coeff, q)
+                encoded_coeff = encoder.encode(coeff, scale)
                 evaluator.mod_switch_to_inplace(encoded_coeff, ctxt.parms_id()) 
                 temp = evaluator.multiply_plain(ctxt, encoded_coeff)
                 evaluator.relinearize_inplace(temp, relin_keys)
                 evaluator.rescale_to_next_inplace(temp)
                 
-                rot = i * (In * S_total - H_in)
+                rot = i * (Img * S_total - H_in)
                 tmp_list.append(evaluator.rotate_vector(temp, rot, galois_key))
 
             C_out = evaluator.add_many(tmp_list)
@@ -330,23 +332,25 @@ def fc_layer_converter(evaluator, encoder, galois_key, relin_keys, C_in, M_w, bi
     for o in range(DAT_out):
         M_rot.append(np.roll(M_w[o], shift=(-1)*o).tolist())
 
-    q = DAT_in // DAT_out
+    q = math.ceil(DAT_in / DAT_out)
 
     if DAT_in % DAT_out != 0:
+        M_rot_transform = []
         r = DAT_in % DAT_out
-        q = q + 1
         for o in range(DAT_out):
-            M_rot.append(M_rot[o][:(DAT_in-o)] + [0]*(DAT_out-r) + M_rot[o][(DAT_in-o):])
+            M_rot_transform.append(M_rot[o][:(DAT_in-o)] + [0]*(DAT_out-r) + M_rot[o][(DAT_in-o):])
+        M_rot = M_rot_transform
+
     M_rot = np.array(M_rot).transpose().tolist()
     
-    I_rot = M_rot.shape[0]  # I_rot = math.ceil(DAT_in / DAT_out)
+    I_rot = q * DAT_out
     C_outs = []
 
     for o in range(DAT_out):
         weight = []
         for i in range(q):
             weight = weight + M_rot[o + DAT_out * i]
-        rotate_in_subspace(evaluator, encoder, galois_key, relin_keys, C_outs, weight, C_in, o, I_rot, Data_size=Data_size)
+        rotate_in_subspace(evaluator, encoder, galois_key, relin_keys, C_outs, weight, C_in, o, I_rot, Data_size)
 
     a = evaluator.add_many(C_outs)  
     tmp_list = []
@@ -361,7 +365,7 @@ def fc_layer_converter(evaluator, encoder, galois_key, relin_keys, C_in, M_w, bi
     evaluator.mod_switch_to_inplace(sss, all_addition.parms_id())
     return evaluator.add_plain(all_addition, sss)
 
-def rotate_in_subspace(evaluator, encoder, galois_key, relin_keys, C_outs:list, weight, C, rot_n:int, I_rot:int, N:int=N, Data_size:int=400):
+def rotate_in_subspace(evaluator, encoder, galois_key, relin_keys, C_outs:list, weight, C, rot_n:int, I_rot:int, Data_size:int=400):
     """
     The function that properly rotates the input ciphertext and multiplies it with the weight. 
     It is used in the FC Layer.
@@ -376,7 +380,6 @@ def rotate_in_subspace(evaluator, encoder, galois_key, relin_keys, C_outs:list, 
         - C : Ciphertext that needs to be multiplied
         - rot_n : 회전해야 하는 횟수
         - I_rot : batch 크기 (interval 크기)
-        - N : number of slot
         - Data_size : The data size
     """
     if rot_n > I_rot or I_rot < 1:
@@ -394,7 +397,7 @@ def rotate_in_subspace(evaluator, encoder, galois_key, relin_keys, C_outs:list, 
         
     if any(coeff1):
         ctxt_rot_n_pos = evaluator.rotate_vector(C, rot_n, galois_key)
-        encoded_coeff = encoder.encode(coeff1, q)
+        encoded_coeff = encoder.encode(coeff1, scale)
         evaluator.mod_switch_to_inplace(encoded_coeff, ctxt_rot_n_pos.parms_id())
         result1 = evaluator.multiply_plain(ctxt_rot_n_pos, encoded_coeff)
         evaluator.relinearize_inplace(result1, relin_keys)
@@ -403,7 +406,7 @@ def rotate_in_subspace(evaluator, encoder, galois_key, relin_keys, C_outs:list, 
 
     if any(coeff2):
         ctxt_rot_n_neg = evaluator.rotate_vector(C, ((-1)*I_rot + rot_n), galois_key)
-        encoded_coeff = encoder.encode(coeff2, q)
+        encoded_coeff = encoder.encode(coeff2, scale)
         evaluator.mod_switch_to_inplace(encoded_coeff, ctxt_rot_n_neg.parms_id())
         result2 = evaluator.multiply_plain(ctxt_rot_n_neg, encoded_coeff)
         evaluator.relinearize_inplace(result2, relin_keys)
@@ -411,65 +414,52 @@ def rotate_in_subspace(evaluator, encoder, galois_key, relin_keys, C_outs:list, 
         C_outs.append(result2)
 
 # ApproximateReLUConverter
-def approximated_ReLU_converter(evaluator, encoder, input_size, real_size, relin_keys, C_in, _type=0, Const=1):
+def approximated_ReLU_converter(evaluator, encoder, relin_keys, Data_size, C_in, Const=1):
     """
     The function offers a HE-based ReLU operation of the input ciphertexts.
 
     Args:
         - evaluator : CKKS Evaluator in the SEAL-Python library
         - encoder : CKKS Encoder in the SEAL-Python library
-        - input_size : Input data size
-        - real_size : The real data size that is removed the thresh values.
         - relin_keys : CKKS re-linearlization key in the SEAL-Python library
+        - Data_size : Maximum data size from the total layers
         - C_in : Input ciphertexts list
-        - _type : The type is used for choosing approximate ReLU type
         - Const : The constant parameter in approximate ReLU
 
     Returns:
         - Applied result of the approximated ReLU
     """
-    coeff1 = [0.117071 * (Const**2)]*real_size + [0]*(input_size-real_size)
-    coeff1 = coeff1 *(N // len(coeff1))
+    coeff1 = [0.117071 * (Const**2)] * N
+    coeff2 = [0.5 * Const] * N
+    coeff3 = [0.375373] * N
 
-    coeff2 = [0.5 * Const]*real_size + [0]*(input_size-real_size)
-    coeff2 = coeff2 *(N // len(coeff2))
+    if type(C_in) == list:
+        result_list = []
+        for C in C_in:
+            result_list.append(approximated_ReLU_converter(evaluator, encoder, relin_keys, Data_size, C, Const)[0])
+        return result_list, 1
 
-    coeff3 = [0.375373]*real_size + [0]*(input_size-real_size)
-    coeff3 = coeff3 *(N // len(coeff3))
+    else:
+        encoded_coeff1 = encoder.encode(coeff1, scale)
+        evaluator.mod_switch_to_inplace(encoded_coeff1, C_in.parms_id())
 
-    if _type == 0:
-        if type(C_in) == list:
-            tmp_list = []
-            for C in C_in:
-                tmp_list.append(approximated_ReLU_converter(evaluator, encoder, input_size, real_size, relin_keys, C, _type, Const)[0])
-            return tmp_list, 1
+        result = evaluator.multiply_plain(C_in, encoded_coeff1)
+        evaluator.relinearize_inplace(result, relin_keys)
 
-        else:
-            encoded_coeff1 = encoder.encode(coeff1, q)
-            evaluator.mod_switch_to_inplace(encoded_coeff1, C_in.parms_id())
+        encoded_coeff2 = encoder.encode(coeff2 , result.scale())
+        evaluator.mod_switch_to_inplace(encoded_coeff2, result.parms_id())
+        result = evaluator.add_plain(result, encoded_coeff2)
+        
+        result = evaluator.multiply(C_in, result)
+        evaluator.relinearize_inplace(result, relin_keys)
+        
+        encoded_coeff3 = encoder.encode(coeff3 , result.scale())
+        evaluator.mod_switch_to_inplace(encoded_coeff3, result.parms_id())
+        result = evaluator.add_plain(result, encoded_coeff3)
 
-            temp = evaluator.multiply_plain(C_in, encoded_coeff1)
-            evaluator.relinearize_inplace(temp, relin_keys)
-
-            encoded_coeff2 = encoder.encode(coeff2 , temp.scale())
-            evaluator.mod_switch_to_inplace(encoded_coeff2, temp.parms_id())
-            temp = evaluator.add_plain(temp, encoded_coeff2)
-            temp = evaluator.multiply(C_in, temp)  
-            evaluator.relinearize_inplace(temp, relin_keys)
-            encoded_coeff3 = encoder.encode(coeff3 , temp.scale())
-            evaluator.mod_switch_to_inplace(encoded_coeff3, temp.parms_id())
-            temp = evaluator.add_plain(temp, encoded_coeff3)
-
-            evaluator.rescale_to_next_inplace(temp)
-            evaluator.rescale_to_next_inplace(temp)
-            return temp, 1
-
-    elif _type == 1:
-        sq_ctxt = C_in * C_in
-        qd_ctxt = sq_ctxt * sq_ctxt
-        return qd_ctxt * (-0.0063896) + sq_ctxt * 0.204875 + C_in * 0.5 + 0.234606
-    else :
-        raise Exception('The type is not appropriated')
+        evaluator.rescale_to_next_inplace(result)
+        evaluator.rescale_to_next_inplace(result)
+        return result, 1
 
 # Square
 def square(evaluator, relin_keys, C_in, Const):

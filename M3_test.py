@@ -1,4 +1,4 @@
-from service import *
+from uni_henn.service import *
 from seal import *
 from torchvision import datasets, transforms
 import numpy as np
@@ -56,18 +56,9 @@ class CNN(torch.nn.Module):
         return x
 
 model_cnn = torch.load('./models/M3_model.pth', map_location=torch.device('cpu'))
-# print(model_cnn)
 
 conv2d_client = CNN()
 conv2d_client.load_state_dict(model_cnn)
-# conv2d_client.Conv1.weight.data = model_cnn['Conv1.weight']
-# conv2d_client.Conv1.bias.data = model_cnn['Conv1.bias']
-# conv2d_client.Conv2.weight.data = model_cnn['Conv2.weight']
-# conv2d_client.Conv2.bias.data = model_cnn['Conv2.bias']
-# conv2d_client.FC1.weight.data = model_cnn['FC1.weight']
-# conv2d_client.FC1.bias.data = model_cnn['FC1.bias']
-# conv2d_client.FC2.weight.data = model_cnn['FC2.weight']
-# conv2d_client.FC2.bias.data = model_cnn['FC2.bias']
 
 csps_conv_weights, csps_conv_biases, csps_fc_weights, csps_fc_biases = [], [], [], []
 csps_conv_weights.append(model_cnn['Conv1.weight'])
@@ -79,18 +70,9 @@ csps_fc_biases.append(model_cnn['FC2.bias'])
 strides = [1]
 paddings = [0]
 
-# print()
-# print("Conv1.weight:\t", csps_conv_weights[0].shape)
-# print("Conv1.bias:\t", csps_conv_biases[0].shape)
-# print("FC1.weight:\t", csps_fc_weights[0].shape)
-# print("FC1.bias:\t", csps_fc_biases[0].shape)
-# print("FC2.weight:\t", csps_fc_weights[1].shape)
-# print("FC2.bias:\t", csps_fc_biases[1].shape)
-# print()
-
 image_size = 28 # Suppose that image shape is sqaure
 data_size = 1080
-num_of_data = int((poly_modulus_degree/2)//data_size)
+num_of_data = int((poly_modulus_degree/2) // data_size)
 
 transform = transforms.Compose([
     transforms.ToTensor(),
@@ -104,56 +86,38 @@ def enc_test(evaluator, ckks_encoder, galois_key, relin_keys, csps_ctxt, csps_co
 
     result = re_depth(ckks_encoder, evaluator, relin_keys, [csps_ctxt], 2)
     DEPTH_TIME = time.time()
-    print('DROP DEPTH TIME', DEPTH_TIME - START_TIME)
+    print('DROP DEPTH TIME\t%.3f' %(DEPTH_TIME - START_TIME))
 
-    result, OH, S, const_param = conv2d_layer_converter_(evaluator, ckks_encoder, galois_key, relin_keys, result, csps_conv_weights[0], csps_conv_biases[0], input_size=image_size, real_input_size=image_size, padding=paddings[0], stride=strides[0], data_size=data_size, const_param=1)
+    result, OH, S, const_param = conv2d_layer_converter_(evaluator, ckks_encoder, galois_key, relin_keys, result, csps_conv_weights[0], csps_conv_biases[0], image_size, image_size, paddings[0], strides[0], 1, data_size, 1)
     CHECK_TIME1 = time.time()
-    print('CONV2D 1 TIME', CHECK_TIME1-DEPTH_TIME)
+    print('CONV2D 1 TIME\t%.3f' %(CHECK_TIME1-DEPTH_TIME))
 
-    result, const_param = approximated_ReLU_converter(evaluator, ckks_encoder, data_size, data_size, relin_keys, result, 0, const_param)
+    result, const_param = approximated_ReLU_converter(evaluator, ckks_encoder,  relin_keys, data_size, result, const_param)
     CHECK_TIME2 = time.time()
-    print('APPROX ReLU TIME', CHECK_TIME2-CHECK_TIME1)
+    print('ReLU TIME\t%.3f' %(CHECK_TIME2-CHECK_TIME1))
 
-    result, OH, S, const_param = average_pooling_layer_converter(evaluator, ckks_encoder, galois_key, relin_keys, result, kernel_size=2, input_size=image_size, real_input_size=OH, padding=0, stride=2, tmp_param=S, data_size=data_size, const_param=const_param)
+    result, OH, S, const_param = average_pooling_layer_converter(evaluator,  galois_key, result, 2, image_size, OH, 0, 2, S, const_param)
     CHECK_TIME3 = time.time()
-    print('Avg Pool 1 TIME', CHECK_TIME3-CHECK_TIME2)
+    print('AvgPool 1 TIME\t%.3f' %(CHECK_TIME3-CHECK_TIME2))
 
-    result = flatten(evaluator, ckks_encoder, galois_key, relin_keys, result, OH, OH, S, input_size=image_size, data_size=data_size, const_param=const_param)
+    result = flatten(evaluator, ckks_encoder, galois_key, relin_keys, result, OH, OH, S, image_size, data_size, const_param)
     CHECK_TIME4 = time.time()
-    print('FLATTEN TIME', CHECK_TIME4-CHECK_TIME3)
+    print('FLATTEN TIME\t%.3f' %(CHECK_TIME4-CHECK_TIME3))
 
-    result = fc_layer_converter(evaluator, ckks_encoder, galois_key, relin_keys, result, csps_fc_weights[0], csps_fc_biases[0], data_size=data_size)
+    result = fc_layer_converter(evaluator, ckks_encoder, galois_key, relin_keys, result, csps_fc_weights[0], csps_fc_biases[0], data_size)
     CHECK_TIME5 = time.time()
-    print('FC1 TIME', CHECK_TIME5-CHECK_TIME4)
+    print('FC1 TIME\t%.3f' %(CHECK_TIME5-CHECK_TIME4))
 
-    result, const_param = approximated_ReLU_converter(evaluator, ckks_encoder, data_size, 120, relin_keys, result, 0, 1)
+    result, const_param = approximated_ReLU_converter(evaluator, ckks_encoder, relin_keys, data_size, result, 1)
     CHECK_TIME6 = time.time()
-    print('APPROX ReLU TIME', CHECK_TIME6-CHECK_TIME5)
+    print('ReLU TIME\t%.3f' %(CHECK_TIME6-CHECK_TIME5))
 
-    result = fc_layer_converter(evaluator, ckks_encoder, galois_key, relin_keys, result, csps_fc_weights[1], csps_fc_biases[1], data_size=data_size)
+    result = fc_layer_converter(evaluator, ckks_encoder, galois_key, relin_keys, result, csps_fc_weights[1], csps_fc_biases[1], data_size)
     END_TIME = time.time()
-    print('FC2 TIME', END_TIME-CHECK_TIME5)
+    print('FC2 TIME\t%.3f' %(END_TIME-CHECK_TIME5))
 
-    count_correct = 0
-    for i in range(num_of_data):
-        max_data_idx = 0
-        dataList = conv2d_client(data)[i].flatten().tolist()
-        max_data_idx = 1 + dataList.index(max(dataList))
-
-        max_ctxt_idx = 0
-        max_ctxt = -1e10
-        for j in range(10):
-            ctxt_data = ckks_encoder.decode(decryptor.decrypt(result))[j+data_size*i]
-            if(max_ctxt < ctxt_data):
-                max_ctxt = ctxt_data
-                max_ctxt_idx = 1 + j
-        
-        if max_data_idx == max_ctxt_idx:
-            count_correct += 1
-
-    # print('Test Accuracy (Overall): {0}% ({1}/{2})'.format(count_correct/num_of_data*100, count_correct, num_of_data))
-    print('Total Time', END_TIME-START_TIME)
-    # print()
+    print('Total Time\t%.3f' %(END_TIME-START_TIME))
+    print()
 
     for i in range(num_of_data):
         max_data_idx = -1
@@ -172,14 +136,14 @@ def enc_test(evaluator, ckks_encoder, galois_key, relin_keys, csps_ctxt, csps_co
                 max_ctxt = ctxt_data
                 max_ctxt_idx = j
         
-        # print(i+1, 'th result')
-        # print("Error          |", sum)
-        # print("original label |", max_data_idx)
-        # print("HE label       |", max_ctxt_idx)
-        # print("real label     |", label[i])
-        # print("="*30)
+        print(i+1, 'th result')
+        print("Error          |", sum)
+        print("original label |", max_data_idx)
+        print("HE label       |", max_ctxt_idx)
+        print("real label     |", label[i])
+        print("="*30)
 
-for index in range(5):
+for index in range(1):
     data, label = next(iter(test_loader))
     data, label = np.array(data), label.tolist()
 
@@ -193,6 +157,5 @@ for index in range(5):
     ctxt = encryptor.encrypt(ckks_encoder.encode(new_data, scale))
     # ctxt.save('ctxt/mnist_ctxt')
 
-    print('result', index + 1)
     enc_test(evaluator, ckks_encoder, galois_key, relin_keys, ctxt, csps_conv_weights, csps_conv_biases, image_size, paddings, strides, data_size, label)
     print()
