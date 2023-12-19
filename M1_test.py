@@ -34,12 +34,7 @@ class CNN(torch.nn.Module):
 model_cnn = torch.load('./models/M1_model.pth', map_location=torch.device('cpu'))
 
 conv2d_client = CNN()
-conv2d_client.Conv1.weight.data = model_cnn['Conv1.weight']
-conv2d_client.Conv1.bias.data = model_cnn['Conv1.bias']
-conv2d_client.FC1.weight.data = model_cnn['FC1.weight']
-conv2d_client.FC1.bias.data = model_cnn['FC1.bias']
-conv2d_client.FC2.weight.data = model_cnn['FC2.weight']
-conv2d_client.FC2.bias.data = model_cnn['FC2.bias']
+conv2d_client.load_state_dict(model_cnn)
 
 csps_conv_weights, csps_conv_biases, csps_fc_weights, csps_fc_biases = [], [], [], []
 csps_conv_weights.append(model_cnn['Conv1.weight'])
@@ -56,33 +51,31 @@ def enc_test(evaluator, ckks_encoder, galois_key, relin_keys, csps_ctxt, csps_co
 
     result = re_depth(ckks_encoder, evaluator, relin_keys, [csps_ctxt], 4)
     DEPTH_TIME = time.time()
-
     print('DROP DEPTH TIME\t%.3f' %(DEPTH_TIME - START_TIME))
 
-    result, OH, S, const_param = conv2d_layer_converter_(evaluator, ckks_encoder, galois_key, relin_keys, result, csps_conv_weights[0], csps_conv_biases[0], input_size=image_size, real_input_size=image_size, padding=paddings[0], stride=strides[0], data_size=data_size, const_param=1)
+    result, OH, S, const_param = conv2d_layer_converter_(evaluator, ckks_encoder, galois_key, relin_keys, result, csps_conv_weights[0], csps_conv_biases[0], image_size, image_size, paddings[0], strides[0], 1, data_size, 1)
     CHECK_TIME1 = time.time()
-    print('CONV2D 1 TIME\t%.3f' %(CHECK_TIME1-START_TIME))
+    print('CONV2D 1 TIME\t%.3f' %(CHECK_TIME1-DEPTH_TIME))
 
-    result, const_param = square(evaluator, relin_keys, result, const_param=const_param)
+    result, const_param = square(evaluator, relin_keys, result, const_param)
     CHECK_TIME2 = time.time()
     print('SQ 1 TIME\t%.3f' %(CHECK_TIME2-CHECK_TIME1))
 
-    result = flatten(evaluator, ckks_encoder, galois_key, relin_keys, result, OH, OH, S, input_size=image_size, data_size=data_size, const_param=const_param)
+    result = flatten(evaluator, ckks_encoder, galois_key, relin_keys, result, OH, OH, S, image_size, data_size, const_param)
     CHECK_TIME3 = time.time()
     print('FLATTEN TIME\t%.3f' %(CHECK_TIME3-CHECK_TIME2))
 
-    result = fc_layer_converter(evaluator, ckks_encoder, galois_key, relin_keys, result, csps_fc_weights[0], csps_fc_biases[0], data_size=data_size)
+    result = fc_layer_converter(evaluator, ckks_encoder, galois_key, relin_keys, result, csps_fc_weights[0], csps_fc_biases[0], data_size)
     CHECK_TIME4 = time.time()
     print('FC1 TIME\t%.3f' %(CHECK_TIME4-CHECK_TIME3))
 
-    result, const_param = square(evaluator, relin_keys, result, const_param=1)
+    result, const_param = square(evaluator, relin_keys, result, 1)
     CHECK_TIME5 = time.time()
     print('SQ 2 TIME\t%.3f' %(CHECK_TIME5-CHECK_TIME4))
 
-    result = fc_layer_converter(evaluator, ckks_encoder, galois_key,relin_keys, result, csps_fc_weights[1], csps_fc_biases[1], data_size=data_size)
+    result = fc_layer_converter(evaluator, ckks_encoder, galois_key, relin_keys, result, csps_fc_weights[1], csps_fc_biases[1], data_size)
     END_TIME = time.time()
     print('FC2 TIME\t%.3f' %(END_TIME-CHECK_TIME5))
-
 
     print('Total Time\t%.3f sec' %(END_TIME-START_TIME))
     print()

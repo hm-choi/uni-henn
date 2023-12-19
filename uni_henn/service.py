@@ -18,299 +18,297 @@ import numpy as np
 import time
 import math
 
-num_of_slot = 8192
-scale = 2**32
+N = 8192    # Number of slots of ciphertext in pW_iner of 2
+scale = 2**32   # Scale value used in polynomial quotient ring
 
-def re_depth(encoder, evaluator, relin_keys, ctxt_list, count):
+def re_depth(encoder, evaluator, relin_keys, C_in, count):
     """
-    The function reduces the multiplication depth to meet the depth that is needed in the test
+    The function reduces the multiplication depth to meet the depth that is needed in the test.
     Even though the same operation (addition, multiplication, and rotation, etc) is used, 
     more operation time is consumed when the depth is large.
 
     Args:
-        encoder: blah
-        evaluator: blah
-        relin_keys: blah
-        ctxt_list: blah
-        count: blah
-    
-    Returns:
-        blah
-    """
+        - encoder: CKKS Encoder in the SEAL-Python library
+        - evaluator: CKKS Evaluator in the SEAL-Python library
+        - relin_keys: Re-linearization key of CKKS scheme in the SEAL-Python library
+        - C_in: List of the ciphertexts that want to reduce the depth
+        - count: The number want to set as the depth
 
-    result_list = []
-    coeff = [1] * num_of_slot
-        
-    for ctxt in ctxt_list:
+    Returns:
+        - C_out: List of the ciphertexts after reducing the depth
+    """
+    C_out = []
+    
+    for C in C_in:
         for _ in range(count):
-            encoded_coeff = encoder.encode(coeff, scale)
-            evaluator.mod_switch_to_inplace(encoded_coeff, ctxt.parms_id())
-            ctxt = evaluator.multiply_plain(ctxt, encoded_coeff)
-            evaluator.relinearize_inplace(ctxt, relin_keys)
-            evaluator.rescale_to_next_inplace(ctxt)
-        result_list.append(ctxt)
-    return result_list
+            Plaintext = encoder.encode([1] * N, scale)
+            evaluator.mod_switch_to_inplace(Plaintext, C.parms_id())
+            C = evaluator.multiply_plain(C, Plaintext)
+            evaluator.relinearize_inplace(C, relin_keys)
+            evaluator.rescale_to_next_inplace(C)
+        C_out.append(C)
+    return C_out
 
 def calculate_data_size(image_size, csps_conv_weights, csps_fc_weights, strides, paddings):
     """
     The function is used to calculate the largest layer length of the CNN model.
 
     Args:
-        image_size: blah
-        csps_conv_weights: blah
-        csps_fc_weights: blah
-        strides: blah
-        paddings: blah
-    
-    Returns:
-        blah
-    """
+        - image_size: Input image size
+        - csps_conv_weights: Weight set of the convolutional layer
+        - csps_fc_weights: Weight set of the fully connected layer
+        - strides: Stride of convolutional layer
+        - paddings: Padding size
 
-    data_size = image_size**2
-    OH = image_size
+    Returns:
+        - Data_size: Maximum data size from the total layers
+    """
+    Data_size = image_size**2
+    H_in = image_size
 
     len_conv_layer = len(csps_conv_weights)
     for i in range(len_conv_layer):
         len_output  = csps_conv_weights[i].shape[0]
         kernel_size = csps_conv_weights[i].shape[2]
 
-        OH = (OH + paddings[i] * 2 - kernel_size)//strides[i] + 1
-        output_size = OH**2 * len_output
-        if output_size > data_size:
-            data_size = output_size
+        H_in = (H_in + paddings[i] * 2 - kernel_size)//strides[i] + 1
+        output_size = H_in**2 * len_output
+        if output_size > Data_size:
+            Data_size = output_size
 
     for weight in csps_fc_weights:
         input_size = weight.shape[1]
         output_size = weight.shape[0]
 
         output_size = output_size * math.ceil(input_size / output_size)
-        if output_size > data_size:
-            data_size = output_size
+        if output_size > Data_size:
+            Data_size = output_size
 
-    return data_size
+    return Data_size
 
-def average_pooling_layer_converter(evaluator, encoder, galois_key, relin_keys, ctxt_list, kernel_size, input_size, real_input_size, padding, stride, tmp_param, data_size, const_param):
+def average_pooling_layer_converter(evaluator, galois_key, C_in, K, Img, In, P, S, I_in, Const):
     """
     This function calculates the average pooling operation of the input data.
-
+    
     Args:
-        evaluator: blah
-        encoder: blah
-        galois_key: blah
-        relin_keys: blah
-        ctxt_list: blah
-        kernel_size: blah
-        input_size: blah
-        real_input_size: blah
-        padding: blah
-        stride: blah
-        tmp_param: blah
-        data_size: blah
-        const_param: blah
+        - evaluator: CKKS Evaluator in the SEAL-Python library
+        - galois_key: CKKS galois key in the SEAL-Python library
+        - C_in: Input ciphertexts list
+        - K: Kernel size 
+        - Img: Width (and height) of used image data
+        - In: Size of input data that is removed the invalid values
+        - P: Padding size
+        - S: Stride value
+        - I_in: Interval value between valid data before average pooling layer
+        - Const: Value to be multiplied by C_in before layer
 
     Returns:
-        blah
+        - C_out: Output ciphertexts list
+        - Out: Size of output data that is removed the invalid values
+        - I_out: Interval value between valid data after average pooling layer
+        - Const/(K**2): Value to be multiplied by C_out after average pooling layer
     """
+    C_out = []
+    Out = (In + P * 2 - K)//S + 1
+    I_out = I_in * S
 
-    result_list = []
-    rotated_ctxt_list = []
-    len_ctxt = len(ctxt_list)
-    OH = (real_input_size + padding * 2 - kernel_size)//stride + 1
+    C_rot = []
+    CH_in = len(C_in)
 
-    for i in range(len_ctxt):
-        ctxt = ctxt_list[i]
-        tmp_list = []
-        for k1 in range(kernel_size):
-            for k2 in range(kernel_size):
-                rot_val = tmp_param * (k2 + input_size * k1)
-                rotated_ctxt = evaluator.rotate_vector(ctxt, rot_val, galois_key)
-                tmp_list.append(rotated_ctxt)
-        rotated_ctxt_list.append(tmp_list)
+    for i in range(CH_in):
+        C_rot.append([])
+        for p in range(K):
+            C_rot[i].append([])
+            for q in range(K):
+                Ciphertext = evaluator.rotate_vector(C_in[i], I_in * (q + Img * p), galois_key)
+                C_rot[i][p].append(Ciphertext)
 
-    for i in range(len_ctxt):
-        added_tmp_list = [] 
-        for j in range(kernel_size**2):
-            rotated_ctxt = rotated_ctxt_list[i][j]
-            added_tmp_list.append(rotated_ctxt)
-        result = evaluator.add_many(added_tmp_list)
-        result_list.append(result)
-    return result_list, OH, tmp_param*stride, const_param/(kernel_size**2)
+    for i in range(CH_in):
+        Ciphtertexts = [] 
+        for p in range(K):
+            for q in range(K):
+                Ciphtertexts.append(C_rot[i][p][q])
+        C_out_o = evaluator.add_many(Ciphtertexts)
+        C_out.append(C_out_o)
+
+    return C_out, Out, I_out, Const/(K**2)
  
-def conv2d_layer_converter_(evaluator, encoder, galois_key, relin_keys, ctxt_list, kernel_list, bias_list, input_size:int=28, real_input_size:int=28, padding:int=0, stride:int=2, tmp_param:int=1, data_size:int=400, const_param:int=1):
+def conv2d_layer_converter_(evaluator, encoder, galois_key, relin_keys, C_in, Ker, B, Img, In, P, S, I_in, Data_size, Const:int=1):
     """
-    blah
-
+    This function calculates the 2D convolution operation of the input data.
+    
     Args:
-        evaluator: blah
-        encoder: blah
-        galois_key: blah
-        relin_keys: blah
-        ctxt_list: blah
-        kernel_list: blah
-        bias_list: blah
-        input_size: blah
-        real_input_size: blah
-        padding: blah
-        stride: blah
-        tmp_param: blah
-        data_size: blah
-        const_param: blah
-    
+        - evaluator: CKKS Evaluator in the SEAL-Python library
+        - encoder: CKKS Encoder in the SEAL-Python library
+        - galois_key: CKKS galois key in the SEAL-Python library
+        - relin_keys: Re-linearization key of CKKS scheme in the SEAL-Python library
+        - C_in: Input ciphertexts list
+        - Ker: Kernel weight (shape : CH_out * CH_in * K * K)
+        - B: Bias value (shape : CH_out)
+        - Img: Width (and height) of used image data
+        - In: Size of input data that is removed the invalid values
+        - P: Padding size
+        - S: Stride value
+        - I_in: Interval value between valid data before conv2d layer
+        - Data_size: Maximum data size from the total layers
+        - Const: Value to be multiplied by C_in before layer
+
     Returns:
-        blah
+        - C_out: Output ciphertexts list
+        - Out: Size of output data that is removed the invalid  values
+        - I_out: Interval value between valid data after average pooling layer
+        - Const: Value to be multiplied by C_out after conv2d layer (= 1)
     """
+        
+    CH_out  = Ker.shape[0]
+    CH_in   = Ker.shape[1]
+    K       = Ker.shape[2]
 
-    len_output  = kernel_list.shape[0]
-    len_input   = kernel_list.shape[1]
-    kernel_size = kernel_list.shape[2]
-    result_list = []
-    rotated_ctxt_list = []
-    OH = (real_input_size + padding * 2 - kernel_size)//stride + 1
+    C_out = []
+    Out = (In + P * 2 - K)//S + 1
+    I_out = I_in * S
 
-    for i in range(len_input):
-        ctxt = ctxt_list[i]
-        tmp_list = []
-        for k1 in range(kernel_size):
-            for k2 in range(kernel_size):
-                rot_val = tmp_param * (k2 + input_size * k1)
-                rotated_ctxt = evaluator.rotate_vector(ctxt, rot_val, galois_key)
-                tmp_list.append(rotated_ctxt)
-        rotated_ctxt_list.append(tmp_list)
+    C_rot = []
+
+    for i in range(CH_in):
+        C_rot.append([])
+        for p in range(K):
+            C_rot[i].append([])
+            for q in range(K):
+                C = evaluator.rotate_vector(C_in[i], I_in * (q + Img * p), galois_key)
+                C_rot[i][p].append(C)
     
-    for o in range(len_output):
-        added_tmp_list = []
-        for i in range(len_input):
-            for j in range(len(rotated_ctxt_list[i])):
-                weight = kernel_list[o][i].flatten()[j].tolist()
-                weight = weight * const_param
-                rotated_ctxt = rotated_ctxt_list[i][j]
-                weight_list = [weight] + [0] * (stride * tmp_param - 1)
-                weight_list = weight_list * OH
-                weight_list = weight_list + [0]*(input_size * stride * tmp_param - len(weight_list))
-                weight_list = weight_list * OH
-                weight_list = weight_list + [0]*(data_size - len(weight_list))
-                weight_list = weight_list * (num_of_slot//len(weight_list))
-                
-                encoded_coeff = encoder.encode(weight_list, scale) #
-                evaluator.mod_switch_to_inplace(encoded_coeff, rotated_ctxt.parms_id()) #
+    for o in range(CH_out):
+        C_outs = []
+        for i in range(CH_in):
+            for p in range(K):
+                for q in range(K):
+                    """Vector of kernel"""
+                    V_ker = [Ker.tolist()[o][i][p][q] * Const] + [0] * (I_out - 1)
+                    V_ker = V_ker * Out + [0] * ((Img - Out) * I_out)
+                    V_ker = V_ker * Out + [0] * (Data_size - Img * I_out * Out)
+                    V_ker = V_ker * (N // Data_size)
 
-                try:
-                    mult_ctxt = evaluator.multiply_plain(rotated_ctxt, encoded_coeff)
-                    evaluator.relinearize_inplace(mult_ctxt, relin_keys)
-                    evaluator.rescale_to_next_inplace(mult_ctxt)
+                    Plaintext_ker = encoder.encode(V_ker, scale)
+                    evaluator.mod_switch_to_inplace(Plaintext_ker, C_rot[i][p][q].parms_id())
 
-                    added_tmp_list.append(mult_ctxt)
-                except RuntimeError as e:
-                    print("Warning: An error occurred, but it's being ignored:", str(e))
+                    """
+                    This try-catch part is handling exceptions for errors that occur when multiplying the vector of 0.
+                    """
+                    try:
+                        C = evaluator.multiply_plain(C_rot[i][p][q], Plaintext_ker)
+                        evaluator.relinearize_inplace(C, relin_keys)
+                        evaluator.rescale_to_next_inplace(C)
 
-        result = evaluator.add_many(added_tmp_list)
+                        C_outs.append(C)
+                    except RuntimeError as e:
+                        print("Warning: An error occurred, but it's being ignored:", str(e))
+        
+        C_out_o = evaluator.add_many(C_outs)
 
-        bias = [bias_list.tolist()[o]]+[0]*(stride * tmp_param - 1)  
-        bias = bias * OH
-        bias = bias + [0] * (input_size * stride * tmp_param - len(bias))
-        bias = bias * OH
-        bias = bias + [0] * (data_size - len(bias))
-        bias = bias * (num_of_slot//len(bias)) 
+        """Vector of bias"""            
+        V_bias = [B.tolist()[o]] + [0] * (I_out - 1)  
+        V_bias = V_bias * Out + [0] * ((Img - Out) * I_out)
+        V_bias = V_bias * Out + [0] * (Data_size - Img * I_out * Out)
+        V_bias = V_bias * (N // Data_size) 
 
-        encoded_bias = encoder.encode(bias, result.scale())
-        evaluator.mod_switch_to_inplace(encoded_bias, result.parms_id())
-        result = evaluator.add_plain(result, encoded_bias)
-        result_list.append(result)
+        Plaintext_bias = encoder.encode(V_bias, C_out_o.scale())
+        evaluator.mod_switch_to_inplace(Plaintext_bias, C_out_o.parms_id())
+        C_out_o = evaluator.add_plain(C_out_o, Plaintext_bias)
+        C_out.append(C_out_o)
 
-    return result_list, OH, tmp_param*stride, 1
+    return C_out, Out, I_out, 1
 
-def flatten(evaluator, encoder, galois_key, relin_keys, ctxt_list, OW:int, OH:int, tmp:int, input_size:int=28, data_size:int=400, const_param:int=1):
+def flatten(evaluator, encoder, galois_key, relin_keys, C_in, W_in:int, H_in:int, S_total:int, Img:int=28, Data_size:int=400, Const:int=1):
     """
     The function is used to concatenate between the convolution layer and the fully connected layer.
 
     Args:
-        evaluator: blah
-        encoder: blah
-        galois_key: blah
-        relin_keys: blah
-        ctxt_list: blah
-        OW: blah
-        OH: blah
-        tmp: blah
-        input_size: blah
-        data_size: blah
-        const_param: blah
-    
-    Returns:
-        blah
-    """
+        - evaluator: CKKS Evaluator in the SEAL-Python library
+        - encoder: CKKS Encoder in the SEAL-Python library
+        - galois_key: CKKS galois key in the SEAL-Python library
+        - relin_keys: CKKS re-linearlization key in the SEAL-Python library
+        - C_in : Input ciphertexts list
+        - W_in, H_in: Width and height of input data that is removed the invalid values
+        - S_total: The value is the product of each convolutional layer’s stride and the kernel sizes of all average pooling layers
+        - Img: Size of input data that is removed the invalid values
+        - Data_size: The real data size 
+        - Const: Value to be multiplied by C_in before layer
 
-    if const_param != 1:
-        gather_ctxt_list = []
-        for ctxt in ctxt_list:
+    Returns:
+        - C_out: The output of the flattened result of the input ciphertext list
+    """
+    if Const != 1:
+        gather_C_in = []
+        for ctxt in C_in:
             tmp_list = []
 
-            coeff = [const_param] + [0]*(input_size * tmp - 1)
-            coeff = coeff * OH
-            coeff = coeff + [0] * (data_size - len(coeff))
-            coeff = coeff * (num_of_slot // data_size)
-            coeff = coeff + [0] * (num_of_slot - len(coeff))
+            coeff = [Const] + [0]*(Img * S_total - 1)
+            coeff = coeff * H_in
+            coeff = coeff + [0] * (Data_size - len(coeff))
+            coeff = coeff * (N // Data_size)
+            coeff = coeff + [0] * (N - len(coeff))
 
-            for i in range(OH):
-                rot_coeff = np.roll(coeff, tmp * i).tolist()
+            for i in range(H_in):
+                rot_coeff = np.roll(coeff, S_total * i).tolist()
                 encoded_coeff = encoder.encode(rot_coeff, scale)
                 evaluator.mod_switch_to_inplace(encoded_coeff, ctxt.parms_id())
                 mult_ctxt = evaluator.multiply_plain(ctxt, encoded_coeff)
                 evaluator.relinearize_inplace(mult_ctxt, relin_keys)
                 evaluator.rescale_to_next_inplace(mult_ctxt)
 
-                mult_ctxt = evaluator.rotate_vector(mult_ctxt, (tmp - 1) * i, galois_key)
+                mult_ctxt = evaluator.rotate_vector(mult_ctxt, (S_total - 1) * i, galois_key)
                 tmp_list.append(mult_ctxt)
                 
-            gather_ctxt_list.append(evaluator.add_many(tmp_list))
+            gather_C_in.append(evaluator.add_many(tmp_list))
 
-        ctxt_list = gather_ctxt_list
+        C_in = gather_C_in
 
-    elif tmp != 1 and OW != 1:
-        rotated_ctxt_list = []
-        for ctxt in ctxt_list:
+    elif S_total != 1 and W_in != 1:
+        rotated_C_in = []
+        for ctxt in C_in:
             tmp_list = []
-            for s in range(tmp):
-                tmp_list.append(evaluator.rotate_vector(ctxt, s*(tmp-1), galois_key))
-            rotated_ctxt_list.append(evaluator.add_many(tmp_list))
+            for s in range(S_total):
+                tmp_list.append(evaluator.rotate_vector(ctxt, s*(S_total-1), galois_key))
+            rotated_C_in.append(evaluator.add_many(tmp_list))
         
-        gather_ctxt_list = []
-        for ctxt in rotated_ctxt_list:
+        gather_C_in = []
+        for ctxt in rotated_C_in:
             tmp_list = []
 
-            coeff = [1]*tmp + [0]*((input_size - 1) * tmp)
-            coeff = coeff * OH
-            coeff = coeff + [0] * (data_size - len(coeff))
-            coeff = coeff * (num_of_slot // data_size)
+            coeff = [1]*S_total + [0]*((Img - 1) * S_total)
+            coeff = coeff * H_in
+            coeff = coeff + [0] * (Data_size - len(coeff))
+            coeff = coeff * (N // Data_size)
             
-            num_rot = math.ceil(OH / tmp)
+            num_rot = math.ceil(H_in / S_total)
             for i in range(num_rot):
-                rot_coeff = np.roll(coeff, tmp**2 * i).tolist()
+                rot_coeff = np.roll(coeff, S_total**2 * i).tolist()
                 encoded_coeff = encoder.encode(rot_coeff, scale)
                 evaluator.mod_switch_to_inplace(encoded_coeff, ctxt.parms_id())
                 mult_ctxt = evaluator.multiply_plain(ctxt, encoded_coeff)
                 evaluator.relinearize_inplace(mult_ctxt, relin_keys)
                 evaluator.rescale_to_next_inplace(mult_ctxt)
 
-                mult_ctxt = evaluator.rotate_vector(mult_ctxt, tmp*(tmp-1) * i, galois_key)
+                mult_ctxt = evaluator.rotate_vector(mult_ctxt, S_total*(S_total-1) * i, galois_key)
                 tmp_list.append(mult_ctxt)
             
-            gather_ctxt_list.append(evaluator.add_many(tmp_list))
+            gather_C_in.append(evaluator.add_many(tmp_list))
 
-        ctxt_list = gather_ctxt_list
+        C_in = gather_C_in
 
-    num_ctxt = len(ctxt_list)
-    result_list = []
+    num_ctxt = len(C_in)
+    C_outs = []
     for o in range(num_ctxt):
-        ctxt = ctxt_list[o]
-        if OH == 1:
-            result = ctxt
+        ctxt = C_in[o]
+        if H_in == 1:
+            C_out = ctxt
         else:
             tmp_list = []
-            for i in range(OH):
-                coeff = [1]*OH + [0]*(data_size - OH)
-                coeff = np.array(coeff * (num_of_slot//len(coeff)))
-                coeff = np.roll(coeff, input_size * tmp * i)
+            for i in range(H_in):
+                coeff = [1]*H_in + [0]*(Data_size - H_in)
+                coeff = np.array(coeff * (N//len(coeff)))
+                coeff = np.roll(coeff, Img * S_total * i)
 
                 encoded_coeff = encoder.encode(coeff, scale)
                 evaluator.mod_switch_to_inplace(encoded_coeff, ctxt.parms_id()) 
@@ -318,218 +316,189 @@ def flatten(evaluator, encoder, galois_key, relin_keys, ctxt_list, OW:int, OH:in
                 evaluator.relinearize_inplace(temp, relin_keys)
                 evaluator.rescale_to_next_inplace(temp)
                 
-                rot = i * (input_size * tmp - OH)
+                rot = i * (Img * S_total - H_in)
                 tmp_list.append(evaluator.rotate_vector(temp, rot, galois_key))
 
-            result = evaluator.add_many(tmp_list)
-        result_list.append(evaluator.rotate_vector(result, (-1)*o*OW*OH,galois_key))
-    return evaluator.add_many(result_list)
+            C_out = evaluator.add_many(tmp_list)
+        C_outs.append(evaluator.rotate_vector(C_out, (-1)*o*W_in*H_in,galois_key))
+    return evaluator.add_many(C_outs)
 
-def fc_layer_converter(evaluator, encoder, galois_key, relin_keys, ctxt, weights, bias, data_size:int=400):
+def fc_layer_converter(evaluator, encoder, galois_key, relin_keys, C_in, M_w, bias, Data_size:int=400):
     """
     The function offers a HE-based fully connected layer operation with input ciphertext.
 
     Args:
-        evaluator: blah
-        encoder: blah
-        galois_key: blah
-        relin_keys: blah
-        ctxt: blah
-        weights: blah
-        bias: blah
-        data_size: blah
-    
-    Returns:
-        blah
+        - evaluator : CKKS Evaluator in the SEAL-Python library
+        - encoder : CKKS Encoder in the SEAL-Python library
+        - galois_key : CKKS galois key in the SEAL-Python library
+        - relin_keys : CKKS re-linearlization key in the SEAL-Python library
+        - C_in : Input ciphertext
+        - M_w : Weight matrix (shape: DAT_out * DAT_in)
+        - bias : The bias of the FC layer
+        - Data_size : The data size
+
+    Returns: 
+        - C_out : The output of the FC layer of the input ciphertext
     """
+    DAT_in = M_w.shape[1]
+    DAT_out = M_w.shape[0]
+    M_rot = []
+    for o in range(DAT_out):
+        M_rot.append(np.roll(M_w[o], shift=(-1)*o).tolist())
 
-    input_size = weights.shape[1] 
-    output_size = weights.shape[0] 
-    weights_origin = []
-    for idx in range(input_size):
-        if idx < output_size:
-            weights_origin.append(np.roll(weights[idx], shift=(-1)*idx).tolist())
+    q = math.ceil(DAT_in / DAT_out)
 
-    tmp = input_size // output_size
+    if DAT_in % DAT_out != 0:
+        M_rot_transform = []
+        r = DAT_in % DAT_out
+        for o in range(DAT_out):
+            M_rot_transform.append(M_rot[o][:(DAT_in-o)] + [0]*(DAT_out-r) + M_rot[o][(DAT_in-o):])
+        M_rot = M_rot_transform
 
-    if input_size % output_size != 0:
-        aa = input_size % output_size
-        tmp_list = []
-        tmp = tmp+1
-        for idx in range(len(weights_origin)):
-            length = len(weights_origin[idx])
-            tmp_list.append(weights_origin[idx][:(length-idx)] + [0]*(output_size-aa) + weights_origin[idx][(length-idx):])
-        weights_origin = tmp_list
-    weights_origin = np.array(weights_origin).transpose().tolist()
+    M_rot = np.array(M_rot).transpose().tolist()
     
-    rot_interval = np.array(weights_origin).transpose().shape[1]
-    result_list = []
+    I_rot = q * DAT_out
+    C_outs = []
 
-    for idx in range(output_size):
+    for o in range(DAT_out):
         weight = []
-        for i in range(tmp):
-            weight = weight + weights_origin[idx+output_size*i]
-        rotate_in_subspace(evaluator, encoder, galois_key, relin_keys, result_list, weight, ctxt, idx, rot_interval, num_of_slots=num_of_slot, data_size=data_size)
+        for i in range(q):
+            weight = weight + M_rot[o + DAT_out * i]
+        rotate_in_subspace(evaluator, encoder, galois_key, relin_keys, C_outs, weight, C_in, o, I_rot, Data_size)
 
-    a = evaluator.add_many(result_list)  
+    a = evaluator.add_many(C_outs)  
     tmp_list = []
-    for i in range(tmp):
-        tmp_list.append(evaluator.rotate_vector(a, i*output_size, galois_key))
+    for i in range(q):
+        tmp_list.append(evaluator.rotate_vector(a, i*DAT_out, galois_key))
     all_addition = evaluator.add_many(tmp_list)
     
-    bias_list = bias.tolist() + [0]*(data_size-len(bias.tolist()))  
-    bias_list = bias_list*(num_of_slot//len(bias_list))
+    bias_list = bias.tolist() + [0]*(Data_size-len(bias.tolist()))  
+    bias_list = bias_list*(N//len(bias_list))
 
     sss = encoder.encode(bias_list, all_addition.scale())
     evaluator.mod_switch_to_inplace(sss, all_addition.parms_id())
     return evaluator.add_plain(all_addition, sss)
 
-def approximated_ReLU_converter(evaluator, encoder, input_size, real_size, relin_keys, ctxt_list, _type=0, const_param=1):
+def rotate_in_subspace(evaluator, encoder, galois_key, relin_keys, C_outs:list, weight, C, rot_n:int, I_rot:int, Data_size:int=400):
     """
-    The function offers a HE-based ReLU operation of the input ciphertexts.
+    The function that properly rotates the input ciphertext and multiplies it with the weight. 
+    It is used in the FC Layer.
 
     Args:
-        evaluator: blah
-        encoder: blah
-        input_size: blah
-        real_size: blah
-        relin_keys: blah
-        ctxt_list: blah
-        _type: blah
-        const_param: blah
-    
-    Returns:
-        blah
-    
-    Raise:
-        Exception: The type is not appropriated.
+        - evaluator : CKKS Evaluator in the SEAL-Python library
+        - encoder : CKKS Encoder in the SEAL-Python library
+        - galois_key : CKKS galois key in the SEAL-Python library
+        - relin_keys : CKKS re-linearlization key in the SEAL-Python library
+        - C_outs : Ciphertext list that needs to be multiplied (It must be added)
+        - weight : Plaintext of weight
+        - C : Ciphertext that needs to be multiplied
+        - rot_n : 회전해야 하는 횟수
+        - I_rot : batch 크기 (interval 크기)
+        - Data_size : The data size
     """
-
-    coeff1 = [0.117071 * (const_param**2)]*real_size + [0]*(input_size-real_size)
-    coeff1 = coeff1 *(num_of_slot//len(coeff1))
-
-    coeff2 = [0.5 * const_param]*real_size + [0]*(input_size-real_size)
-    coeff2 = coeff2 *(num_of_slot//len(coeff2))
-
-    coeff3 = [0.375373]*real_size + [0]*(input_size-real_size)
-    coeff3 = coeff3 *(num_of_slot//len(coeff3))
-
-    if _type == 0:
-        if type(ctxt_list) == list:
-            tmp_list = []
-            for ctxt in ctxt_list:
-                tmp_list.append(approximated_ReLU_converter(evaluator, encoder, input_size, real_size, relin_keys, ctxt, _type, const_param)[0])
-            return tmp_list, 1
-
-        else:
-            ctxt = ctxt_list
-            encoded_coeff1 = encoder.encode(coeff1, scale)
-            evaluator.mod_switch_to_inplace(encoded_coeff1, ctxt.parms_id())
-
-            temp = evaluator.multiply_plain(ctxt, encoded_coeff1)
-            evaluator.relinearize_inplace(temp, relin_keys)
-
-            encoded_coeff2 = encoder.encode(coeff2 , temp.scale())
-            evaluator.mod_switch_to_inplace(encoded_coeff2, temp.parms_id())
-            temp = evaluator.add_plain(temp, encoded_coeff2)
-            temp = evaluator.multiply(ctxt, temp)  
-            evaluator.relinearize_inplace(temp, relin_keys)
-            encoded_coeff3 = encoder.encode(coeff3 , temp.scale())
-            evaluator.mod_switch_to_inplace(encoded_coeff3, temp.parms_id())
-            temp = evaluator.add_plain(temp, encoded_coeff3)
-
-            evaluator.rescale_to_next_inplace(temp)
-            evaluator.rescale_to_next_inplace(temp)
-            return temp, 1
-
-    elif _type == 1:
-        sq_ctxt = ctxt * ctxt
-        qd_ctxt = sq_ctxt * sq_ctxt
-        return qd_ctxt * (-0.0063896) + sq_ctxt * 0.204875 + ctxt * 0.5 + 0.234606
-    else :
-        raise Exception('The type is not appropriated')
-
-def rotate_in_subspace(evaluator, encoder, galois_key, relin_keys, result_list:list, weight, ctxt, rot_n:int, interval_len:int, num_of_slots:int=num_of_slot, data_size:int=400):
-    """
-    blah
-
-    Args:
-        evaluator: blah
-        encoder: blah
-        galois_key: blah
-        relin_keys: blah
-        result_list: blah
-        weight: blah
-        ctxt: blah
-        rot_n: blah
-        interval_len: blah
-        num_of_slots: blah
-        data_size: blah
-    
-    Returns:
-        blah
-
-    Raise:
-        Exception: invalid interval length
-    """
-
-    if rot_n > interval_len or interval_len < 1:
+    if rot_n > I_rot or I_rot < 1:
         raise Exception('')
     
-    coeff1 = weight[:interval_len-rot_n]
-    coeff1 = coeff1 + ([0]*(data_size - len(coeff1)))
-    coeff1 = coeff1 * (num_of_slots//len(coeff1))
-    coeff1 = coeff1 + [0]*(num_of_slots - len(coeff1))
+    coeff1 = weight[:I_rot-rot_n]
+    coeff1 = coeff1 + ([0]*(Data_size - len(coeff1)))
+    coeff1 = coeff1 * (N//len(coeff1))
+    coeff1 = coeff1 + [0]*(N - len(coeff1))
 
-    coeff2 = [0]*(interval_len-rot_n) + weight[interval_len-rot_n:interval_len]
-    coeff2 = coeff2 + ([0]*(data_size - len(coeff2)))
-    coeff2 = coeff2 * (num_of_slots//len(coeff2))
-    coeff2 = coeff2 + [0]*(num_of_slots - len(coeff2))
+    coeff2 = [0]*(I_rot-rot_n) + weight[I_rot-rot_n:I_rot]
+    coeff2 = coeff2 + ([0]*(Data_size - len(coeff2)))
+    coeff2 = coeff2 * (N // len(coeff2))
+    coeff2 = coeff2 + [0]*(N - len(coeff2))
         
     if any(coeff1):
-        ctxt_rot_n_pos = evaluator.rotate_vector(ctxt, rot_n, galois_key)
+        ctxt_rot_n_pos = evaluator.rotate_vector(C, rot_n, galois_key)
         encoded_coeff = encoder.encode(coeff1, scale)
         evaluator.mod_switch_to_inplace(encoded_coeff, ctxt_rot_n_pos.parms_id())
         result1 = evaluator.multiply_plain(ctxt_rot_n_pos, encoded_coeff)
         evaluator.relinearize_inplace(result1, relin_keys)
         evaluator.rescale_to_next_inplace(result1)
-        result_list.append(result1)
+        C_outs.append(result1)
 
     if any(coeff2):
-        ctxt_rot_n_neg = evaluator.rotate_vector(ctxt, ((-1)*interval_len + rot_n), galois_key)
+        ctxt_rot_n_neg = evaluator.rotate_vector(C, ((-1)*I_rot + rot_n), galois_key)
         encoded_coeff = encoder.encode(coeff2, scale)
         evaluator.mod_switch_to_inplace(encoded_coeff, ctxt_rot_n_neg.parms_id())
         result2 = evaluator.multiply_plain(ctxt_rot_n_neg, encoded_coeff)
         evaluator.relinearize_inplace(result2, relin_keys)
         evaluator.rescale_to_next_inplace(result2)
-        result_list.append(result2)
+        C_outs.append(result2)
 
-def square(evaluator, relin_keys, ctxt_list, const_param):
+def approximated_ReLU_converter(evaluator, encoder, relin_keys, Data_size, C_in, Const=1):
     """
-    The function offers a HE-based square operation of the input ciphertexts.
+    The function offers a HE-based ReLU operation of the input ciphertexts.
 
     Args:
-        evaluator: blah
-        relin_keys: blah
-        ctxt_list: blah
-        const_param: blah
-    
-    Returns:
-        blah
-    """
+        - evaluator : CKKS Evaluator in the SEAL-Python library
+        - encoder : CKKS Encoder in the SEAL-Python library
+        - relin_keys : CKKS re-linearlization key in the SEAL-Python library
+        - Data_size : Maximum data size from the total layers
+        - C_in : Input ciphertexts list
+        - Const : The constant parameter in approximate ReLU
 
-    if type(ctxt_list) == list:
+    Returns:
+        - Applied result of the approximated ReLU
+    """
+    coeff1 = [0.117071 * (Const**2)] * N
+    coeff2 = [0.5 * Const] * N
+    coeff3 = [0.375373] * N
+
+    if type(C_in) == list:
         result_list = []
-        for ctxt in ctxt_list:
-            result = evaluator.square(ctxt)
-            evaluator.relinearize_inplace(result, relin_keys)
-            evaluator.rescale_to_next_inplace(result)
-            result_list.append(result)
-        
-        return result_list, const_param**2
+        for C in C_in:
+            result_list.append(approximated_ReLU_converter(evaluator, encoder, relin_keys, Data_size, C, Const)[0])
+        return result_list, 1
+
     else:
-        ctxt = ctxt_list
-        result = evaluator.square(ctxt) 
+        encoded_coeff1 = encoder.encode(coeff1, scale)
+        evaluator.mod_switch_to_inplace(encoded_coeff1, C_in.parms_id())
+
+        result = evaluator.multiply_plain(C_in, encoded_coeff1)
         evaluator.relinearize_inplace(result, relin_keys)
+
+        encoded_coeff2 = encoder.encode(coeff2 , result.scale())
+        evaluator.mod_switch_to_inplace(encoded_coeff2, result.parms_id())
+        result = evaluator.add_plain(result, encoded_coeff2)
+        
+        result = evaluator.multiply(C_in, result)
+        evaluator.relinearize_inplace(result, relin_keys)
+        
+        encoded_coeff3 = encoder.encode(coeff3 , result.scale())
+        evaluator.mod_switch_to_inplace(encoded_coeff3, result.parms_id())
+        result = evaluator.add_plain(result, encoded_coeff3)
+
         evaluator.rescale_to_next_inplace(result)
-        return result, const_param**2
+        evaluator.rescale_to_next_inplace(result)
+        return result, 1
+
+def square(evaluator, relin_keys, C_in, Const):
+    """
+    The function offers a HE-based square operation of the input ciphertexts.
+    
+    Args:
+        - evaluator : CKKS Evaluator in the SEAL-Python library
+        - relin_keys : CKKS re-linearlization key in the SEAL-Python library
+        - C_in : Input ciphertexts list
+        - Const : The constant parameter in square function
+
+    Returns:
+        - C_out : Squared result ciphertexts list
+        - Const**2 : Square of the Const
+    """
+    if type(C_in) == list:
+        C_out = []
+        for C in C_in:
+            C = evaluator.square(C)
+            evaluator.relinearize_inplace(C, relin_keys)
+            evaluator.rescale_to_next_inplace(C)
+            C_out.append(C)
+        
+        return C_out, Const**2
+    else:
+        C_out = evaluator.square(C_in) 
+        evaluator.relinearize_inplace(C_out, relin_keys)
+        evaluator.rescale_to_next_inplace(C_out)
+        return C_out, Const**2
