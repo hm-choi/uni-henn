@@ -1,3 +1,18 @@
+"""
+THIS IS EXAMPLE
+A one-line summary of the module or program, terminated by a period.
+
+Leave one blank line.  The rest of this docstring should contain an
+overall description of the module or program.  Optionally, it may also
+contain a brief description of exported classes and functions and/or usage
+examples.
+
+Typical usage example:
+
+  foo = ClassFoo()
+  bar = foo.FunctionBar()
+"""
+
 from seal import *
 import numpy as np
 import time
@@ -308,7 +323,6 @@ def flatten(evaluator, encoder, galois_key, relin_keys, C_in, W_in:int, H_in:int
         C_outs.append(evaluator.rotate_vector(C_out, (-1)*o*W_in*H_in,galois_key))
     return evaluator.add_many(C_outs)
 
-# FCLayerConverter
 def fc_layer_converter(evaluator, encoder, galois_key, relin_keys, C_in, M_w, bias, Data_size:int=400):
     """
     The function offers a HE-based fully connected layer operation with input ciphertext.
@@ -413,7 +427,6 @@ def rotate_in_subspace(evaluator, encoder, galois_key, relin_keys, C_outs:list, 
         evaluator.rescale_to_next_inplace(result2)
         C_outs.append(result2)
 
-# ApproximateReLUConverter
 def approximated_ReLU_converter(evaluator, encoder, relin_keys, Data_size, C_in, Const=1):
     """
     The function offers a HE-based ReLU operation of the input ciphertexts.
@@ -461,7 +474,6 @@ def approximated_ReLU_converter(evaluator, encoder, relin_keys, Data_size, C_in,
         evaluator.rescale_to_next_inplace(result)
         return result, 1
 
-# Square
 def square(evaluator, relin_keys, C_in, Const):
     """
     The function offers a HE-based square operation of the input ciphertexts.
