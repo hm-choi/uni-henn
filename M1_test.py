@@ -1,37 +1,19 @@
-from uni_henn.service import *
+from uni_henn import *
+from models.model_structures import M1
+
 from seal import *
 from torchvision import datasets, transforms
 import numpy as np
 import torch
-import h5py, os
 import time
-import math
 
-# public_key.save('key/public_key')
-# secret_key.save('key/secret_key')
-# galois_key.save('key/galois_key')
-# relin_keys.save('key/relin_keys')
+import os
+current_dir = os.path.dirname(os.path.abspath(__file__))
 
-import torch.nn.functional as F
-import torch.optim as optim
+HE_CNN = torch.load(current_dir + '/models/M1_model.pth', map_location=torch.device('cpu'))
 
-class CNN(torch.nn.Module):
-    def __init__(self, hidden=64, output=10):
-        super(CNN, self).__init__()
-        self.Conv1 = torch.nn.Conv2d(in_channels=1, out_channels=8, kernel_size=4, stride=3, padding=0)
-        self.FC1 = torch.nn.Linear(9 * 9 * 8, 64)
-        self.FC2 = torch.nn.Linear(64, 10)
+client = M1()
 
-    def forward(self, x):
-        x = self.Conv1(x)
-        x = x * x
-        x = torch.flatten(x, 1)
-        x = self.FC1(x)
-        x = x * x
-        x = self.FC2(x)
-        return x
-
-model_cnn = torch.load('./models/M1_model.pth', map_location=torch.device('cpu'))
 
 conv2d_client = CNN()
 conv2d_client.load_state_dict(model_cnn)

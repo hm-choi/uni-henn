@@ -1,18 +1,3 @@
-"""
-THIS IS EXAMPLE
-A one-line summary of the module or program, terminated by a period.
-
-Leave one blank line.  The rest of this docstring should contain an
-overall description of the module or program.  Optionally, it may also
-contain a brief description of exported classes and functions and/or usage
-examples.
-
-Typical usage example:
-
-  foo = ClassFoo()
-  bar = foo.FunctionBar()
-"""
-
 from seal import *
 import numpy as np
 import time
@@ -86,6 +71,18 @@ def calculate_data_size(image_size, csps_conv_weights, csps_fc_weights, strides,
 
     return Data_size
 
+# def calculate_Data_size(Img: Cuboid, model):
+#     Data_size = Img.z * Img.h * Img.w
+
+#     for layer_name, layer in model.named_children():
+#         if layer.__class__.__name__ == 'Linear':
+#             layer = getattr(model, layer_name)
+#             _size = layer.out_features * math.ceil(layer.in_features / layer.out_features)
+#             if Data_size < _size:
+#                 Data_size = _size
+        
+#     return Data_size
+
 def average_pooling_layer_converter(evaluator, galois_key, C_in, K, Img, In, P, S, I_in, Const):
     """
     This function calculates the average pooling operation of the input data.
@@ -133,7 +130,7 @@ def average_pooling_layer_converter(evaluator, galois_key, C_in, K, Img, In, P, 
 
     return C_out, Out, I_out, Const/(K**2)
  
-def conv2d_layer_converter_(evaluator, encoder, galois_key, relin_keys, C_in, Ker, B, Img, In, P, S, I_in, Data_size, Const:int=1):
+def conv2d_layer_converter_(evaluator, encoder, galois_key, relin_keys, C_in, Ker, B, Img, In, P, S, I_in, Data_size, Const):
     """
     This function calculates the 2D convolution operation of the input data.
     
@@ -155,7 +152,7 @@ def conv2d_layer_converter_(evaluator, encoder, galois_key, relin_keys, C_in, Ke
 
     Returns:
         - C_out: Output ciphertexts list
-        - Out: Size of output data that is removed the invalid  values
+        - Out: Size of output data that is removed the invalid values
         - I_out: Interval value between valid data after average pooling layer
         - Const: Value to be multiplied by C_out after conv2d layer (= 1)
     """
@@ -219,7 +216,7 @@ def conv2d_layer_converter_(evaluator, encoder, galois_key, relin_keys, C_in, Ke
 
     return C_out, Out, I_out, 1
 
-def flatten(evaluator, encoder, galois_key, relin_keys, C_in, W_in:int, H_in:int, S_total:int, Img:int=28, Data_size:int=400, Const:int=1):
+def flatten(evaluator, encoder, galois_key, relin_keys, C_in, W_in, H_in, S_total, Img, Data_size, Const):
     """
     The function is used to concatenate between the convolution layer and the fully connected layer.
 
@@ -323,7 +320,7 @@ def flatten(evaluator, encoder, galois_key, relin_keys, C_in, W_in:int, H_in:int
         C_outs.append(evaluator.rotate_vector(C_out, (-1)*o*W_in*H_in,galois_key))
     return evaluator.add_many(C_outs)
 
-def fc_layer_converter(evaluator, encoder, galois_key, relin_keys, C_in, M_w, bias, Data_size:int=400):
+def fc_layer_converter(evaluator, encoder, galois_key, relin_keys, C_in, M_w, bias, Data_size):
     """
     The function offers a HE-based fully connected layer operation with input ciphertext.
 
@@ -379,7 +376,7 @@ def fc_layer_converter(evaluator, encoder, galois_key, relin_keys, C_in, M_w, bi
     evaluator.mod_switch_to_inplace(sss, all_addition.parms_id())
     return evaluator.add_plain(all_addition, sss)
 
-def rotate_in_subspace(evaluator, encoder, galois_key, relin_keys, C_outs:list, weight, C, rot_n:int, I_rot:int, Data_size:int=400):
+def rotate_in_subspace(evaluator, encoder, galois_key, relin_keys, C_outs, weight, C, rot_n, I_rot, Data_size):
     """
     The function that properly rotates the input ciphertext and multiplies it with the weight. 
     It is used in the FC Layer.
