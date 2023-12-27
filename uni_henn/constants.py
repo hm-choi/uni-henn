@@ -1,4 +1,5 @@
 import torch
+from torchvision import datasets, transforms
 
 TORCH_DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 NUMBER_OF_SLOTS = 8192
@@ -11,3 +12,8 @@ DEPTH = 11
 COEFF_MODULUS = [INTEGER_SCALE + FRACTION_SCALE] + \
                 [FRACTION_SCALE] * DEPTH + \
                 [INTEGER_SCALE + FRACTION_SCALE]
+
+TRANSFORM = transforms.Compose([
+    transforms.ToTensor(),
+    transforms.Normalize((0.5,), (0.5,))
+])

@@ -82,6 +82,21 @@ class HE_CNN(torch.nn.Module):
             
         return data_size
     
+    def encrypt(self, plaintext_list: list):
+        ciphertext_list = []
+        for plaintext in plaintext_list:
+            ciphertext_list.append(
+                self.context.encryptor.encrypt(
+                    self.context.encoder.encode(plaintext, SCALE)
+                )
+            )
+        return ciphertext_list
+    
+    def decrypt(self, ciphertext):
+        return self.context.encoder.decode(
+                    self.context.decryptor.decrypt(ciphertext)
+                )
+    
     def forward(self, C_in: list):
         C_out = re_depth(self.context, C_in, DEPTH - self.calculate_depth())
         Out = Output(C_out, self.Img)
@@ -114,5 +129,8 @@ class HE_CNN(torch.nn.Module):
 
             elif layer.__class__.__name__ == 'Linear':
                 Out.ciphertexts[0] = fc_layer_converter(self.context, Out.ciphertexts[0], layer_params, self.data_size)
+
+        return Out.ciphertexts[0]
                 
-        
+    def __str__(self):
+        return self.model.__str__()

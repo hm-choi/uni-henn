@@ -44,9 +44,9 @@ def average_pooling_layer_converter(context: Context, In: Output, Img: Cuboid, l
     Out = Output(
         ciphertexts = [], 
         size = Cuboid(
-            z = CH_in,
-            h = (In.size.h + 2 * P.h - K.h) // S.h + 1,
-            w = (In.size.w + 2 * P.w - K.w) // S.w + 1
+            length = CH_in,
+            height = (In.size.h + 2 * P.h - K.h) // S.h + 1,
+            width = (In.size.w + 2 * P.w - K.w) // S.w + 1
         ), 
         interval = Rectangle(In.interval.h * S.h, In.interval.w * S.w), 
         const = In.const / (K.h * K.w)

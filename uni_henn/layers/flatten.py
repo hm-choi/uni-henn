@@ -136,7 +136,7 @@ def flatten(context: Context, In: Output, Img: Cuboid, data_size):
     Out = Output(
         ciphertexts = [context.evaluator.add_many(C_outs)],
         size = Cuboid(1, 1, In.size.size3d()),
-        interval = 1,
+        interval = Rectangle(1, 1),
         const = 1
     )
     return Out
