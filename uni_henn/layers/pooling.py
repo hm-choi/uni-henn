@@ -6,7 +6,6 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 project_root = os.path.abspath(os.path.join(current_dir, ".."))
 sys.path.insert(0, project_root)
 
-from constants import NUMBER_OF_SLOTS, SCALE
 from utils.module import Context
 from utils.structure import Output, Cuboid, Rectangle
 
@@ -18,28 +17,28 @@ def average_pooling_layer_converter(context: Context, In: Output, Img: Cuboid, l
         - context: Context that has all the necessary keys
             - evaluator: CKKS Evaluator in the SEAL-Python library
             - galois_key: CKKS galois key in the SEAL-Python library
-        - In:
+        - In: This is containing the information below
             - ciphertexts: Input ciphertexts list
             - size: Size of input data that is removed the invalid values
             - interval: Interval value between valid data before AvgPool2d layer
             - const: Value to be multiplied by ciphertext before layer
         - Img: Width (and height) of used image data
-        - layer:
+        - layer: Average pooling layer that is containing the information below
             - kernel_size: Kernel size 
             - padding: Padding size
             - stride: Stride value
 
     Returns:
-        - Out: blah
+        - Out: This is containing the information below
             - ciphertexts: Output ciphertexts list
             - size: Size of output data that is removed the invalid  values
             - interval: Interval value between valid data after AvgPool2d layer
             - const: Value to be multiplied by C_out after AvgPool2d layer
     """
     CH_in = In.size.z
-    K     = Rectangle(layer.kernel_size[0], layer.kernel_size[1])
-    S     = Rectangle(layer.stride[0], layer.stride[1])
-    P     = Rectangle(layer.padding[0], layer.padding[1])
+    K     = Rectangle(layer.kernel_size, layer.kernel_size)
+    S     = Rectangle(layer.stride, layer.stride)
+    P     = Rectangle(layer.padding, layer.padding)
     
     Out = Output(
         ciphertexts = [], 

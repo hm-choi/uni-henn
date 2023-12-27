@@ -22,13 +22,13 @@ def flatten(context: Context, In: Output, Img: Cuboid, data_size):
             - encoder: CKKS Encoder in the SEAL-Python library
             - galois_key: CKKS galois key in the SEAL-Python library
             - relin_keys: CKKS re-linearlization key in the SEAL-Python library
-        - In: blah
-            - C_in : Input ciphertexts list
+        - In: This is containing the information below
+            - C_in: Input ciphertexts list
             - W_in, H_in: Width and height of input data that is removed the invalid values
             - S_total: The value is the product of each convolutional layer’s stride and the kernel sizes of all average pooling layers
             - Const: Value to be multiplied by C_in before layer
         - Img: Width (and height) of used image data
-        - data_size: The real data size 
+        - data_size: Maximum data size from the total layers 
 
     Returns:
         - C_out: The output of the flattened result of the input ciphertext list

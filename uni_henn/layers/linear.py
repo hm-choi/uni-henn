@@ -10,7 +10,6 @@ sys.path.insert(0, project_root)
 
 from constants import NUMBER_OF_SLOTS, SCALE
 from utils.module import Context
-from utils.structure import Output, Cuboid, Rectangle
 
 def rotate_in_subspace(context: Context, C_outs: list, weight, ciphertext, rot_n, I_rot, data_size):
     """
@@ -19,16 +18,16 @@ def rotate_in_subspace(context: Context, C_outs: list, weight, ciphertext, rot_n
 
     Args:
         - context: Context that has all the necessary keys
-            - evaluator : CKKS Evaluator in the SEAL-Python library
-            - encoder : CKKS Encoder in the SEAL-Python library
-            - galois_key : CKKS galois key in the SEAL-Python library
-            - relin_keys : CKKS re-linearlization key in the SEAL-Python library
-        - C_outs : Ciphertext list that needs to be multiplied (It must be added)
-        - weight : Plaintext of weight
-        - ciphertext : Ciphertext that needs to be multiplied
-        - rot_n : 회전해야 하는 횟수
-        - I_rot : batch 크기 (interval 크기)
-        - data_size : The data size
+            - evaluator: CKKS Evaluator in the SEAL-Python library
+            - encoder: CKKS Encoder in the SEAL-Python library
+            - galois_key: CKKS galois key in the SEAL-Python library
+            - relin_keys: CKKS re-linearlization key in the SEAL-Python library
+        - C_outs: Ciphertext list that needs to be multiplied (It must be added)
+        - weight: Plaintext of weight
+        - ciphertext: Ciphertext that needs to be multiplied
+        - rot_n: Number of rotations required
+        - I_rot: batch size (interval size)
+        - data_size: Maximum data size from the total layers
     """
     if rot_n > I_rot or I_rot < 1:
         raise Exception('')
@@ -67,18 +66,18 @@ def fc_layer_converter(context: Context, C_in, layer, data_size):
 
     Args:
         - context: Context that has all the necessary keys
-            - evaluator : CKKS Evaluator in the SEAL-Python library
-            - encoder : CKKS Encoder in the SEAL-Python library
-            - galois_key : CKKS galois key in the SEAL-Python library
-            - relin_keys : CKKS re-linearlization key in the SEAL-Python library
-        - C_in : Input ciphertext
+            - evaluator: CKKS Evaluator in the SEAL-Python library
+            - encoder: CKKS Encoder in the SEAL-Python library
+            - galois_key: CKKS galois key in the SEAL-Python library
+            - relin_keys: CKKS re-linearlization key in the SEAL-Python library
+        - C_in: Input ciphertext
         - layer: FC layer that contains weight and bias parameter
-            - weight : Weight matrix (shape: DAT_out * DAT_in)
-            - bias : The bias of the FC layer
-        - data_size : The data size
+            - weight: Weight matrix (shape: DAT_out * DAT_in)
+            - bias: The bias of the FC layer
+        - data_size: Maximum data size from the total layers
 
     Returns: 
-        - C_out : The output of the FC layer of the input ciphertext
+        - C_out: The output of the FC layer of the input ciphertext
     """
     DAT_in = layer.in_features
     DAT_out = layer.out_features

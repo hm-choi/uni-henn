@@ -7,6 +7,7 @@ import math
 
 import sys
 import os
+import time
 current_dir = os.path.dirname(os.path.abspath(__file__))
 project_root = os.path.abspath(os.path.join(current_dir, ".."))
 sys.path.insert(0, project_root)
@@ -37,13 +38,13 @@ class HE_CNN(torch.nn.Module):
                 req_depth += 1
                 _const = 1
                 Out.z = layer_params.out_channels
-                Out.h = (Out.h + 2 * layer_params.padding[0] - layer_params.kernel_size[0]) // layer_params.stride[0] - 1
-                Out.w = (Out.w + 2 * layer_params.padding[1] - layer_params.kernel_size[1]) // layer_params.stride[1] - 1
+                Out.h = (Out.h + 2 * layer_params.padding[0] - layer_params.kernel_size[0]) // layer_params.stride[0] + 1
+                Out.w = (Out.w + 2 * layer_params.padding[1] - layer_params.kernel_size[1]) // layer_params.stride[1] + 1
                 
             elif layer.__class__.__name__ == 'AvgPool2d':
                 _const = -1
-                Out.h = (Out.h + 2 * layer_params.padding - layer_params.kernel_size) // layer_params.stride - 1
-                Out.w = (Out.w + 2 * layer_params.padding - layer_params.kernel_size) // layer_params.stride - 1
+                Out.h = (Out.h + 2 * layer_params.padding - layer_params.kernel_size) // layer_params.stride + 1
+                Out.w = (Out.w + 2 * layer_params.padding - layer_params.kernel_size) // layer_params.stride + 1
             
             elif layer.__class__.__name__ == 'Square':
                 req_depth += 1
@@ -97,9 +98,15 @@ class HE_CNN(torch.nn.Module):
                     self.context.decryptor.decrypt(ciphertext)
                 )
     
-    def forward(self, C_in: list):
+    def forward(self, C_in: list, _time=False):
+        START_TIME = time.time()
         C_out = re_depth(self.context, C_in, DEPTH - self.calculate_depth())
         Out = Output(C_out, self.Img)
+        if time:
+            _order = 0
+            CHECK_TIME = []
+            CHECK_TIME.append(time.time())
+            print('Drop depth TIME\t %.3f sec' %(CHECK_TIME[_order] - START_TIME))
 
         for layer_name, layer in self.model.named_children():
             layer_params = getattr(self.model, layer_name)
@@ -121,14 +128,28 @@ class HE_CNN(torch.nn.Module):
 
             elif layer.__class__.__name__ == 'ApproxReLU':
                 Out = approximated_ReLU_converter(
-                    self.context, Out, self.data_size
+                    self.context, Out
                 )
+                if time:
+                    CHECK_TIME.append(time.time())
+                    _order += 1
+                    print('%s TIME %.3f sec' %(layer_name, CHECK_TIME[_order] - CHECK_TIME[_order - 1]))
 
             elif layer.__class__.__name__ == 'Flatten':
                 Out = flatten(self.context, Out, self.Img, self.data_size)
 
             elif layer.__class__.__name__ == 'Linear':
                 Out.ciphertexts[0] = fc_layer_converter(self.context, Out.ciphertexts[0], layer_params, self.data_size)
+
+            if time and layer.__class__.__name__ != 'ApproxReLU':
+                CHECK_TIME.append(time.time())
+                _order += 1
+                print('%s TIME\t %.3f sec' %(layer_name, CHECK_TIME[_order] - CHECK_TIME[_order - 1]))
+
+        if time:
+            END_TIME = time.time()
+            print('Total Time\t%.3f sec' %(END_TIME - START_TIME))
+            print('='*50)
 
         return Out.ciphertexts[0]
                 

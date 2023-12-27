@@ -8,22 +8,20 @@ sys.path.insert(0, project_root)
 
 from constants import NUMBER_OF_SLOTS, SCALE
 from utils.module import Context
-from utils.structure import Output, Cuboid, Rectangle
+from utils.structure import Output
 
-def approximated_ReLU_converter(context:Context, In: Output, data_size):
+def approximated_ReLU_converter(context:Context, In: Output):
     """
     The function offers a HE-based ReLU operation of the input ciphertexts.
 
     Args:
         - context: Context that has all the necessary keys
-            - evaluator : CKKS Evaluator in the SEAL-Python library
-            - encoder : CKKS Encoder in the SEAL-Python library
-            - relin_keys : CKKS re-linearlization key in the SEAL-Python library
-         In:
+            - evaluator: CKKS Evaluator in the SEAL-Python library
+            - encoder: CKKS Encoder in the SEAL-Python library
+            - relin_keys: CKKS re-linearlization key in the SEAL-Python library
+         In: This is containing the information below
             - ciphertexts: Input ciphertexts list
             - const: Value to be multiplied by ciphertext before layer
-            - data_size : Maximum data size from the total layers
-        - data_size : Maximum data size from the total layers
 
     Returns:
         - Applied result of the approximated ReLU
@@ -67,14 +65,14 @@ def square(context: Context, In: Output):
     
     Args:
         - context: Context that has all the necessary keys
-            - evaluator : CKKS Evaluator in the SEAL-Python library
-            - relin_keys : CKKS re-linearlization key in the SEAL-Python library
-        - C_in : Input ciphertexts list
-        - Const : The constant parameter in square function
+            - evaluator: CKKS Evaluator in the SEAL-Python library
+            - relin_keys: CKKS re-linearlization key in the SEAL-Python library
+        - C_in: Input ciphertexts list
+        - Const: The constant parameter in square function
 
     Returns:
-        - C_out : Squared result ciphertexts list
-        - Const**2 : Square of the Const
+        - C_out: Squared result ciphertexts list
+        - Const**2: Square of the Const
     """
     Out = Output(
         ciphertexts = [],

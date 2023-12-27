@@ -2,24 +2,21 @@ from uni_henn import *
 from models.model_structures import * 
 
 from seal import *
-from torchvision import datasets, transforms
-import numpy as np
 import torch
-import math
-
 import os
 
 if __name__ == "__main__":
     current_dir = os.path.dirname(os.path.abspath(__file__))
         
-    model = M1()
-    model = torch.load(current_dir + '/models/M1_model.pth', map_location=torch.device('cpu'))
+    model = M2()
+    model = torch.load(current_dir + '/models/M2_model.pth', map_location=torch.device('cpu'))
 
     print(model)
     print('='*40)
 
     for layer_name, layer in model.named_children():
         layer_params = getattr(model, layer_name)
+        print(f"layer: {layer_name}")
 
         if layer.__class__.__name__ == 'Conv2d':
             print(f"in_channels: {layer_params.in_channels}")
@@ -41,5 +38,3 @@ if __name__ == "__main__":
 
         print(f"layer 전체: {layer}")  # 레이어의 전체 정보 출력
         print('='*40)
-
-    print()

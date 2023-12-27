@@ -20,23 +20,23 @@ def conv2d_layer_converter_(context: Context, In: Output, Img: Cuboid, layer, da
             - encoder: CKKS Encoder in the SEAL-Python library
             - galois_key: CKKS galois key in the SEAL-Python library
             - relin_keys: Re-linearization key of CKKS scheme in the SEAL-Python library
-        - In: blah
+        - In: This is containing the information below
             - ciphertexts: Input ciphertexts list
             - size: Size of input data that is removed the invalid values
             - interval: Interval value between valid data before Conv2d layer
             - const: Value to be multiplied by ciphertext before layer
         - Img: Width (and height) of used image data
-        - layer: blah
-            - in_channels: blah
-            - out_channels: blah
-            - weight: Kernel weight (shape : CH_out * CH_in * K * K)
-            - bias: Bias value (shape : CH_out)
+        - layer: Convolutional 2D layer that is containing the information below
+            - in_channels: Number of input channels
+            - out_channels: Number of output channels
+            - weight: Kernel weight (shape: CH_out * CH_in * K * K)
+            - bias: Bias value (shape: CH_out)
             - padding: Padding size
             - stride: Stride value
         - data_size: Maximum data size from the total layers
 
     Returns:
-        - Out: blah
+        - Out: This is containing the information below
             - ciphertexts: Output ciphertexts list
             - size: Size of output data that is removed the invalid  values
             - interval: Interval value between valid data after Conv2d layer

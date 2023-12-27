@@ -1,5 +1,5 @@
 import torch
-from torchvision import datasets, transforms
+from torchvision import transforms
 
 TORCH_DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 NUMBER_OF_SLOTS = 8192
