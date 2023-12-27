@@ -20,7 +20,7 @@ def conv2d_layer_converter_(context: Context, In: Output, Img: Cuboid, layer, da
             - encoder: CKKS Encoder in the SEAL-Python library
             - galois_key: CKKS galois key in the SEAL-Python library
             - relin_keys: Re-linearization key of CKKS scheme in the SEAL-Python library
-        - In:
+        - In: blah
             - ciphertexts: Input ciphertexts list
             - size: Size of input data that is removed the invalid values
             - interval: Interval value between valid data before Conv2d layer

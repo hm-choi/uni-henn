@@ -100,15 +100,19 @@ class HE_CNN(torch.nn.Module):
                 )
             
             elif layer.__class__.__name__ == 'Square':
-                pass
+                Out = square(
+                    self.context, Out
+                )
 
             elif layer.__class__.__name__ == 'ApproxReLU':
-                pass
+                Out = approximated_ReLU_converter(
+                    self.context, Out, self.data_size
+                )
 
             elif layer.__class__.__name__ == 'Flatten':
-                pass
+                Out = flatten(self.context, Out, self.Img, self.data_size)
 
             elif layer.__class__.__name__ == 'Linear':
-                pass
+                Out.ciphertexts[0] = fc_layer_converter(self.context, Out.ciphertexts[0], layer_params, self.data_size)
                 
         

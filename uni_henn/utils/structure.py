@@ -36,3 +36,6 @@ class Output:
         self.size = size.CopyNew()
         self.interval = interval.CopyNew()
         self.const = const
+
+    def CopyNew(self) -> 'Output':
+        return Output(self.ciphertexts, self.size, self.interval, self.const)
