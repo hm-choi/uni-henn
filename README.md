@@ -64,8 +64,8 @@ We conducted seven experiments to test the performance of UniHENN with various m
 |M6|1D CNN|ECG Dataset|7|M7_test.py|
 
 ## Contributing
-Main Contributor : Jihun Kim (https://github.com/JihunSKKU)
-Register issues and pull requests are welcome. If there are some errors or changes then please open an issue and write down the details. 
+- Main Contributor : Jihun Kim (https://github.com/JihunSKKU)
+- Register issues and pull requests are welcome. If there are some errors or changes then please open an issue and write down the details. 
 
 ## Publications
 TBD
