@@ -66,7 +66,7 @@ We conducted seven experiments to test the performance of UniHENN with various m
 ## Contributing
 - Main Contributor: Jihun Kim (https://github.com/JihunSKKU), Hyunmin Choi(https://github.com/hm-choi)
 - Contributor: Seungho Kim (https://github.com/Seungho-Kim-SKKU)
-- Code Review: Wonbin Choi (https://github.com/bindon)
+- Code Reviewer: Wonbin Choi (https://github.com/bindon)
 - Register issues and pull requests are welcome. If there are some errors or changes then please open an issue and write down the details. 
 
 ## Publications
