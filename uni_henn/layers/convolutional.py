@@ -79,7 +79,7 @@ def conv2d_layer_converter_(context: Context, In: Output, Img: Cuboid, layer, da
             for p in range(K.h):
                 for q in range(K.w):
                     """Vector of kernel"""
-                    V_ker = [list(layer.weight.detach())[o][i][p][q] * In.const] + [0] * (Out.interval.w - 1)
+                    V_ker = [layer.weight.detach().tolist()[o][i][p][q] * In.const] + [0] * (Out.interval.w - 1)
                     V_ker = V_ker * Out.size.w + [0] * (Img.w * Out.interval.h - Out.size.w * Out.interval.w)
                     V_ker = V_ker * Out.size.h + [0] * (data_size - Img.w * Out.interval.h * Out.size.h)
                     V_ker = V_ker * (NUMBER_OF_SLOTS // data_size)
@@ -102,7 +102,7 @@ def conv2d_layer_converter_(context: Context, In: Output, Img: Cuboid, layer, da
         ciphertext = context.evaluator.add_many(C_outs)
 
         """Vector of bias"""            
-        V_bias = [list(layer.bias.detach())[o]] + [0] * (Out.interval.w - 1)  
+        V_bias = [layer.bias.detach().tolist()[o]] + [0] * (Out.interval.w - 1)  
         V_bias = V_bias * Out.size.w + [0] * (Img.w * Out.interval.h - Out.size.w * Out.interval.w)
         V_bias = V_bias * Out.size.h + [0] * (data_size - Img.w * Out.interval.h * Out.size.h)
         V_bias = V_bias * (NUMBER_OF_SLOTS // data_size) 

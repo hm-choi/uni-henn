@@ -148,7 +148,7 @@ class HE_CNN(torch.nn.Module):
 
         if time:
             END_TIME = time.time()
-            print('Total Time\t%.3f sec' %(END_TIME - START_TIME))
+            print('Total Time\t %.3f sec' %(END_TIME - START_TIME))
             print('='*50)
 
         return Out.ciphertexts[0]
