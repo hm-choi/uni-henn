@@ -111,7 +111,7 @@ def fc_layer_converter(context: Context, C_in, layer, data_size):
         tmp_list.append(context.evaluator.rotate_vector(a, i*DAT_out, context.galois_key))
     all_addition = context.evaluator.add_many(tmp_list)
     
-    bias_list = list(layer.bias.detach()) + [0]*(data_size-len(list(layer.bias)))  
+    bias_list = layer.bias.detach().tolist() + [0]*(data_size-len(layer.bias.tolist()))  
     bias_list = bias_list*(NUMBER_OF_SLOTS // len(bias_list))
 
     sss = context.encoder.encode(bias_list, all_addition.scale())
