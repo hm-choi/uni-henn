@@ -61,7 +61,7 @@ We conducted seven experiments to test the performance of UniHENN with various m
 |M4|2D CNN|MNIST|12|M4_test.py|
 |M5|2D CNN|Cifar-10|11|M5_test.py|
 |M6|2D CNN|USPS|6|M6_test.py|
-|M6|1D CNN|ECG Dataset|7|M7_test.py|
+|M7|1D CNN|ECG Dataset|7|M7_test.py|
 
 ## Contributing
 - Main Contributor: Jihun Kim (https://github.com/JihunSKKU), Hyunmin Choi(https://github.com/hm-choi)
