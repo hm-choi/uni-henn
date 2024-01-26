@@ -40,6 +40,12 @@ class HE_CNN(torch.nn.Module):
                 Out.z = layer_params.out_channels
                 Out.h = (Out.h + 2 * layer_params.padding[0] - layer_params.kernel_size[0]) // layer_params.stride[0] + 1
                 Out.w = (Out.w + 2 * layer_params.padding[1] - layer_params.kernel_size[1]) // layer_params.stride[1] + 1
+
+            elif layer.__class__.__name__ == 'Conv1d':
+                req_depth += 1
+                _const = 1
+                Out.z = layer_params.out_channels
+                Out.w = (Out.w + 2 * layer_params.padding[0] - layer_params.kernel_size[0]) // layer_params.stride[0] + 1
                 
             elif layer.__class__.__name__ == 'AvgPool2d':
                 _const = -1
@@ -61,6 +67,7 @@ class HE_CNN(torch.nn.Module):
 
             elif layer.__class__.__name__ == 'Linear':
                 req_depth += 1
+            
         
         return req_depth
 
@@ -99,7 +106,8 @@ class HE_CNN(torch.nn.Module):
                 )
     
     def forward(self, C_in: list, _time=False):
-        START_TIME = time.time()
+        if time:
+            START_TIME = time.time()
         C_out = re_depth(self.context, C_in, DEPTH - self.calculate_depth())
         Out = Output(C_out, self.Img)
         if time:
@@ -116,6 +124,11 @@ class HE_CNN(torch.nn.Module):
                     self.context, Out, self.Img, layer_params, self.data_size
                 )
 
+            elif layer.__class__.__name__ == 'Conv1d':
+                Out = conv1d_layer_converter_(
+                    self.context, Out, layer_params, self.data_size
+                )
+
             elif layer.__class__.__name__ == 'AvgPool2d':
                 Out = average_pooling_layer_converter(
                     self.context, Out, self.Img, layer_params
@@ -130,10 +143,6 @@ class HE_CNN(torch.nn.Module):
                 Out = approximated_ReLU_converter(
                     self.context, Out
                 )
-                if time:
-                    CHECK_TIME.append(time.time())
-                    _order += 1
-                    print('%s TIME %.3f sec' %(layer_name, CHECK_TIME[_order] - CHECK_TIME[_order - 1]))
 
             elif layer.__class__.__name__ == 'Flatten':
                 Out = flatten(self.context, Out, self.Img, self.data_size)
@@ -141,10 +150,13 @@ class HE_CNN(torch.nn.Module):
             elif layer.__class__.__name__ == 'Linear':
                 Out.ciphertexts[0] = fc_layer_converter(self.context, Out.ciphertexts[0], layer_params, self.data_size)
 
-            if time and layer.__class__.__name__ != 'ApproxReLU':
+            if time:
                 CHECK_TIME.append(time.time())
                 _order += 1
-                print('%s TIME\t %.3f sec' %(layer_name, CHECK_TIME[_order] - CHECK_TIME[_order - 1]))
+                if layer.__class__.__name__ == 'ApproxReLU':
+                    print('%s TIME %.3f sec' %(layer_name, CHECK_TIME[_order] - CHECK_TIME[_order - 1]))
+                else:
+                    print('%s TIME\t %.3f sec' %(layer_name, CHECK_TIME[_order] - CHECK_TIME[_order - 1]))
 
         if time:
             END_TIME = time.time()
