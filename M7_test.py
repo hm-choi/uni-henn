@@ -3,7 +3,6 @@ from uni_henn.he_cnn import HE_CNN
 from models.model_structures import M7
 
 from seal import *
-from torchvision import datasets
 import numpy as np
 import torch
 
@@ -38,12 +37,6 @@ if __name__ == "__main__":
 
     num_of_data = int(NUMBER_OF_SLOTS // HE_m7.data_size)
    
-    # test_dataset = datasets.USPS(
-    #     root=current_dir + '/Data', 
-    #     train=False, 
-    #     transform=TRANSFORM,
-    #     download=True
-    # )
     test_dataset = ECG(mode = 'test')
     test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=num_of_data, shuffle=True)
 
