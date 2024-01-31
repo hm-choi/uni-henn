@@ -9,7 +9,7 @@ class Square(torch.nn.Module):
     
 class ApproxReLU(torch.nn.Module):
     def forward(self, x):
-        return 0.117071 * x**2 + 0.5 * x + 0.375373
+        return _approximated_ReLU(x)
     
 class Flatten(torch.nn.Module):
     def forward(self, x):

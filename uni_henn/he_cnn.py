@@ -1,18 +1,10 @@
-from layers import *
-from utils import *
-from constants import *
+from .layers import *
+from .utils import *
+from .constants import *
 
 import torch
 import math
-
-import sys
-import os
 import time
-current_dir = os.path.dirname(os.path.abspath(__file__))
-project_root = os.path.abspath(os.path.join(current_dir, ".."))
-sys.path.insert(0, project_root)
-
-from models.model_structures import *
 
 class HE_CNN(torch.nn.Module):
     """
@@ -106,11 +98,11 @@ class HE_CNN(torch.nn.Module):
                 )
     
     def forward(self, C_in: list, _time=False):
-        if time:
+        if _time:
             START_TIME = time.time()
         C_out = re_depth(self.context, C_in, DEPTH - self.calculate_depth())
         Out = Output(C_out, self.Img)
-        if time:
+        if _time:
             _order = 0
             CHECK_TIME = []
             CHECK_TIME.append(time.time())
@@ -150,7 +142,7 @@ class HE_CNN(torch.nn.Module):
             elif layer.__class__.__name__ == 'Linear':
                 Out.ciphertexts[0] = fc_layer_converter(self.context, Out.ciphertexts[0], layer_params, self.data_size)
 
-            if time:
+            if _time:
                 CHECK_TIME.append(time.time())
                 _order += 1
                 if layer.__class__.__name__ == 'ApproxReLU':
@@ -158,7 +150,7 @@ class HE_CNN(torch.nn.Module):
                 else:
                     print('%s TIME\t %.3f sec' %(layer_name, CHECK_TIME[_order] - CHECK_TIME[_order - 1]))
 
-        if time:
+        if _time:
             END_TIME = time.time()
             print('Total Time\t %.3f sec' %(END_TIME - START_TIME))
             print('='*50)

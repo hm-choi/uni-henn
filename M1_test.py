@@ -7,13 +7,13 @@ from torchvision import datasets
 import numpy as np
 import torch
 
-import os
+import sys, os
 
 if __name__ == "__main__":
-    current_dir = os.path.dirname(os.path.abspath(__file__))
+    root_dir = os.path.dirname(os.path.abspath(__file__))
     
     m1_model = M1()
-    m1_model = torch.load(current_dir + '/models/M1_model.pth', map_location=torch.device('cpu'))
+    m1_model = torch.load(root_dir + '/models/M1_model.pth', map_location=torch.device('cpu'))
 
     MNIST_Img = Cuboid(1, 28, 28)
     context = Context()
@@ -25,7 +25,7 @@ if __name__ == "__main__":
     num_of_data = int(NUMBER_OF_SLOTS // HE_m1.data_size)
    
     test_dataset = datasets.MNIST(
-        root=current_dir + '/Data', 
+        root=root_dir + '/Data', 
         train=False, 
         transform=TRANSFORM,
         download=True
