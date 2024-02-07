@@ -2,15 +2,9 @@ from seal import *
 import math
 import numpy as np
 
-import sys
-import os
-current_dir = os.path.dirname(os.path.abspath(__file__))
-project_root = os.path.abspath(os.path.join(current_dir, ".."))
-sys.path.insert(0, project_root)
-
-from constants import NUMBER_OF_SLOTS, SCALE
-from utils.module import Context
-from utils.structure import Output, Cuboid, Rectangle
+from uni_henn.constants import NUMBER_OF_SLOTS, SCALE
+from uni_henn.utils.module import Context
+from uni_henn.utils.structure import Output, Cuboid, Rectangle
 
 def flatten(context: Context, In: Output, Img: Cuboid, data_size):
     """

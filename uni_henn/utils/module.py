@@ -1,12 +1,5 @@
 from seal import *
-
-import sys
-import os
-current_dir = os.path.dirname(os.path.abspath(__file__))
-project_root = os.path.abspath(os.path.join(current_dir, ".."))
-sys.path.insert(0, project_root)
-
-from constants import *
+from uni_henn.constants import *
 
 class Context:
     def _get_params(self):

@@ -2,14 +2,8 @@ from seal import *
 import math
 import numpy as np
 
-import sys
-import os
-current_dir = os.path.dirname(os.path.abspath(__file__))
-project_root = os.path.abspath(os.path.join(current_dir, ".."))
-sys.path.insert(0, project_root)
-
-from constants import NUMBER_OF_SLOTS, SCALE
-from utils.module import Context
+from uni_henn.constants import NUMBER_OF_SLOTS, SCALE
+from uni_henn.utils.module import Context
 
 def rotate_in_subspace(context: Context, C_outs: list, weight, ciphertext, rot_n, I_rot, data_size):
     """
