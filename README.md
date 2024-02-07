@@ -25,9 +25,11 @@ It provides the following features:
 
 ## How to use
 
+If you want to test the M3 model, enter the following command in the shell:
 ```
-python M*_test.py
+python main.py 3
 ```
+You can enter values from 1 to 7.
 
 ## Dataset
 

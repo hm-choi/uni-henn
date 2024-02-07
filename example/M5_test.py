@@ -1,9 +1,9 @@
 from uni_henn import *
 from uni_henn.he_cnn import HE_CNN
-from models.model_structures import M4
+from models.model_structures import M5
 
 from seal import *
-from torchvision import datasets, transforms
+from torchvision import datasets
 import numpy as np
 import torch
 
@@ -12,23 +12,23 @@ import os
 if __name__ == "__main__":
     current_dir = os.path.dirname(os.path.abspath(__file__))
     
-    m4_model = M4()
-    m4_model = torch.load(current_dir + '/models/M4_model.pth', map_location=torch.device('cpu'))
+    m5_model = M5()
+    m5_model = torch.load(current_dir + '/models/M5_model.pth', map_location=torch.device('cpu'))
 
-    MNIST_Img = Cuboid(1, 32, 32)
+    CIFAR10_Img = Cuboid(3, 32, 32)
     context = Context()
 
-    HE_m4 = HE_CNN(m4_model, MNIST_Img, context)
-    print(HE_m4)
-    print('='*50)
+    HE_m5 = HE_CNN(m5_model, CIFAR10_Img, context)
+    # print(HE_m5)
+    # print('='*50)
 
-    num_of_data = int(NUMBER_OF_SLOTS // HE_m4.data_size)
+    num_of_data = int(NUMBER_OF_SLOTS // HE_m5.data_size)
     
     transform = transforms.Compose([
-        transforms.Resize((32, 32)),
-        transforms.ToTensor()
+        transforms.ToTensor(),
+        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
     ])
-    test_dataset = datasets.MNIST(
+    test_dataset = datasets.CIFAR10(
         root=current_dir + '/Data', 
         train=False, 
         transform=transform,
@@ -39,17 +39,17 @@ if __name__ == "__main__":
     data, _label = next(iter(test_loader))
     _label = _label.tolist()
 
-    ppData = preprocessing(np.array(data), MNIST_Img, num_of_data, HE_m4.data_size)
+    ppData = preprocessing(np.array(data), CIFAR10_Img, num_of_data, HE_m5.data_size)
 
-    ciphertext_list = HE_m4.encrypt(ppData)
+    ciphertext_list = HE_m5.encrypt(ppData)
  
-    result_ciphertext = HE_m4(ciphertext_list, _time=True)
+    result_ciphertext = HE_m5(ciphertext_list, _time=True)
 
-    result_plaintext = HE_m4.decrypt(result_ciphertext)
+    result_plaintext = HE_m5.decrypt(result_ciphertext)
 
     for i in range(num_of_data):
         """Model result without homomorphic encryption"""
-        origin_results = m4_model(data)[i].flatten().tolist()
+        origin_results = m5_model(data)[i].flatten().tolist()
         origin_result = origin_results.index(max(origin_results))
 
         """Model result with homomorphic encryption"""
@@ -57,7 +57,7 @@ if __name__ == "__main__":
         MIN_VALUE = -1e10
         sum = 0
         for idx in range(10):
-            he_output = result_plaintext[idx + HE_m4.data_size*i]
+            he_output = result_plaintext[idx + HE_m5.data_size*i]
 
             sum = sum + np.abs(origin_results[idx] - he_output)
 

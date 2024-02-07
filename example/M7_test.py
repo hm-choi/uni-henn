@@ -32,8 +32,8 @@ if __name__ == "__main__":
     context = Context()
 
     HE_m7 = HE_CNN(m7_model, ECG_Img, context)
-    print(HE_m7)
-    print('='*50)
+    # print(HE_m7)
+    # print('='*50)
 
     num_of_data = int(NUMBER_OF_SLOTS // HE_m7.data_size)
    

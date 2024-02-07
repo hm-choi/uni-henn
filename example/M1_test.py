@@ -19,8 +19,8 @@ if __name__ == "__main__":
     context = Context()
 
     HE_m1 = HE_CNN(m1_model, MNIST_Img, context)
-    print(HE_m1)
-    print('='*50)
+    # print(HE_m1)
+    # print('='*50)
 
     num_of_data = int(NUMBER_OF_SLOTS // HE_m1.data_size)
    
