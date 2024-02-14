@@ -5,6 +5,7 @@ from .constants import *
 import torch
 import math
 import time
+# import pandas as pd
 
 class HE_CNN(torch.nn.Module):
     """
@@ -82,20 +83,35 @@ class HE_CNN(torch.nn.Module):
             
         return data_size
     
-    def encrypt(self, plaintext_list: list):
-        ciphertext_list = []
-        for plaintext in plaintext_list:
-            ciphertext_list.append(
-                self.context.encryptor.encrypt(
-                    self.context.encoder.encode(plaintext, SCALE)
+    def encrypt(self, plaintext):
+        if type(plaintext) != list:
+            return self.context.encryptor.encrypt(
+                        self.context.encoder.encode(plaintext, SCALE)
+                    )
+        else:
+            ciphertext_list = []
+            for plain in plaintext:
+                ciphertext_list.append(
+                    self.context.encryptor.encrypt(
+                        self.context.encoder.encode(plain, SCALE)
+                    )
                 )
-            )
-        return ciphertext_list
+            return ciphertext_list
     
     def decrypt(self, ciphertext):
-        return self.context.encoder.decode(
-                    self.context.decryptor.decrypt(ciphertext)
+        if type(ciphertext) != list:
+            return self.context.encoder.decode(
+                        self.context.decryptor.decrypt(ciphertext)
+                    ).tolist()
+        else:
+            plaintext_list = []
+            for cipher in ciphertext:
+                plaintext_list.append(
+                    self.context.encoder.decode(
+                        self.context.decryptor.decrypt(cipher)
+                    ).tolist()
                 )
+            return plaintext_list
     
     def forward(self, C_in: list, _time=False):
         if _time:
@@ -107,6 +123,9 @@ class HE_CNN(torch.nn.Module):
             CHECK_TIME = []
             CHECK_TIME.append(time.time())
             print('Drop depth TIME\t %.3f sec' %(CHECK_TIME[_order] - START_TIME))
+        
+        # layer_outputs = []
+        # layer_outputs.append(self.decrypt(Out.ciphertexts))
 
         for layer_name, layer in self.model.named_children():
             layer_params = getattr(self.model, layer_name)
@@ -142,6 +161,7 @@ class HE_CNN(torch.nn.Module):
             elif layer.__class__.__name__ == 'Linear':
                 Out.ciphertexts[0] = fc_layer_converter(self.context, Out.ciphertexts[0], layer_params, self.data_size)
 
+            # layer_outputs.append(self.decrypt(Out.ciphertexts))
             if _time:
                 CHECK_TIME.append(time.time())
                 _order += 1
@@ -154,6 +174,28 @@ class HE_CNN(torch.nn.Module):
             END_TIME = time.time()
             print('Total Time\t %.3f sec' %(END_TIME - START_TIME))
             print('='*50)
+
+        # import numpy as np
+        # df = pd.DataFrame()
+        
+        # # Calculate max_len before the loop
+        # max_len = max(len(np.array(layer_output).flatten()) for layer_output in layer_outputs)
+
+        # for i, layer_output in enumerate(layer_outputs):
+        #     flattened_output = np.array(layer_output).flatten()
+
+        #     # Padding with -1 if necessary
+        #     if len(flattened_output) < max_len:
+        #         flattened_output = np.pad(flattened_output, (0, max_len - len(flattened_output)), constant_values=12345)
+
+        #     # Set column name dynamically based on 'i'
+        #     column_name = f"{i}-th output"
+
+        #     # Assign flattened output to the DataFrame
+        #     df[column_name] = flattened_output
+
+        # # Save DataFrame to CSV
+        # df.to_csv('layer_outputs.csv', index=False)
 
         return Out.ciphertexts[0]
                 
