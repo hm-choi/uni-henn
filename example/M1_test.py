@@ -15,13 +15,14 @@ if __name__ == "__main__":
     m1_model = torch.load(root_dir + '/models/M1_model.pth', map_location=torch.device('cpu'))
 
     MNIST_Img = Cuboid(1, 28, 28)
-    context = Context()
+
+    context = sys.argv[1]
 
     HE_m1 = HE_CNN(m1_model, MNIST_Img, context)
     # print(HE_m1)
     # print('='*50)
 
-    num_of_data = int(NUMBER_OF_SLOTS // HE_m1.data_size)
+    num_of_data = int(context.number_of_slots // HE_m1.data_size)
    
     test_dataset = datasets.MNIST(
         root=root_dir + '/Data', 

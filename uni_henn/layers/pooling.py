@@ -1,5 +1,5 @@
 from seal import *
-from uni_henn.utils.module import Context
+from uni_henn.utils.context import Context
 from uni_henn.utils.structure import Output, Cuboid, Rectangle
 
 def average_pooling_layer_converter(context: Context, In: Output, Img: Cuboid, layer):

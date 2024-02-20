@@ -1,7 +1,6 @@
 from seal import *
 
-from uni_henn.constants import NUMBER_OF_SLOTS, SCALE
-from uni_henn.utils.module import Context
+from uni_henn.utils.context import Context
 from uni_henn.utils.structure import Output, Cuboid, Rectangle
 
 def conv2d_layer_converter_(context: Context, In: Output, Img: Cuboid, layer, data_size):
@@ -76,9 +75,9 @@ def conv2d_layer_converter_(context: Context, In: Output, Img: Cuboid, layer, da
                     V_ker = [layer.weight.detach().tolist()[o][i][p][q] * In.const] + [0] * (Out.interval.w - 1)
                     V_ker = V_ker * Out.size.w + [0] * (Img.w * Out.interval.h - Out.size.w * Out.interval.w)
                     V_ker = V_ker * Out.size.h + [0] * (data_size - Img.w * Out.interval.h * Out.size.h)
-                    V_ker = V_ker * (NUMBER_OF_SLOTS // data_size)
+                    V_ker = V_ker * (context.number_of_slots // data_size)
 
-                    Plaintext_ker = context.encoder.encode(V_ker, SCALE)
+                    Plaintext_ker = context.encoder.encode(V_ker, context.scale)
                     context.evaluator.mod_switch_to_inplace(Plaintext_ker, C_rot[i][p][q].parms_id())
 
                     """
@@ -99,7 +98,7 @@ def conv2d_layer_converter_(context: Context, In: Output, Img: Cuboid, layer, da
         V_bias = [layer.bias.detach().tolist()[o]] + [0] * (Out.interval.w - 1)  
         V_bias = V_bias * Out.size.w + [0] * (Img.w * Out.interval.h - Out.size.w * Out.interval.w)
         V_bias = V_bias * Out.size.h + [0] * (data_size - Img.w * Out.interval.h * Out.size.h)
-        V_bias = V_bias * (NUMBER_OF_SLOTS // data_size) 
+        V_bias = V_bias * (context.number_of_slots // data_size) 
 
         Plaintext_bias = context.encoder.encode(V_bias, ciphertext.scale())
         context.evaluator.mod_switch_to_inplace(Plaintext_bias, ciphertext.parms_id())
@@ -175,9 +174,9 @@ def conv1d_layer_converter_(context: Context, In: Output, layer, data_size):
                 """Vector of kernel"""
                 V_ker = [layer.weight.detach().tolist()[o][i][q] * In.const] + [0] * (Out.interval.w - 1)
                 V_ker = V_ker * Out.size.w + [0] * (data_size - Out.interval.w * Out.size.w)
-                V_ker = V_ker * (NUMBER_OF_SLOTS // data_size)
+                V_ker = V_ker * (context.number_of_slots // data_size)
 
-                Plaintext_ker = context.encoder.encode(V_ker, SCALE)
+                Plaintext_ker = context.encoder.encode(V_ker, context.scale)
                 context.evaluator.mod_switch_to_inplace(Plaintext_ker, C_rot[i][q].parms_id())
 
                 """
@@ -197,7 +196,7 @@ def conv1d_layer_converter_(context: Context, In: Output, layer, data_size):
         """Vector of bias"""            
         V_bias = [layer.bias.detach().tolist()[o]] + [0] * (Out.interval.w - 1)  
         V_bias = V_bias * Out.size.w + [0] * (data_size - Out.interval.w * Out.size.w)
-        V_bias = V_bias * (NUMBER_OF_SLOTS // data_size) 
+        V_bias = V_bias * (context.number_of_slots // data_size) 
 
         Plaintext_bias = context.encoder.encode(V_bias, ciphertext.scale())
         context.evaluator.mod_switch_to_inplace(Plaintext_bias, ciphertext.parms_id())

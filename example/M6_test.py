@@ -28,13 +28,14 @@ if __name__ == "__main__":
     m6_model = torch.load(current_dir + '/models/M6_model.pth', map_location=torch.device('cpu'))
 
     ECG_Img = Cuboid(1, 1, 128)
-    context = Context()
+
+    context = sys.argv[1]
 
     HE_m6 = HE_CNN(m6_model, ECG_Img, context)
     # print(HE_m6)
     # print('='*50)
 
-    num_of_data = int(NUMBER_OF_SLOTS // HE_m6.data_size)
+    num_of_data = int(context.number_of_slots // HE_m6.data_size)
    
     test_dataset = ECG(mode = 'test')
     test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=num_of_data, shuffle=True)

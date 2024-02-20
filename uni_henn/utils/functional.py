@@ -1,5 +1,4 @@
-from .module import Context
-from uni_henn.constants import NUMBER_OF_SLOTS, SCALE
+from .context import Context
 
 def re_depth(context: Context, C_in: list, count):
     """
@@ -18,7 +17,7 @@ def re_depth(context: Context, C_in: list, count):
     
     for C in C_in:
         for _ in range(count):
-            Plaintext = context.encoder.encode([1] * NUMBER_OF_SLOTS, SCALE)
+            Plaintext = context.encoder.encode([1] * context.number_of_slots, context.scale)
             context.evaluator.mod_switch_to_inplace(Plaintext, C.parms_id())
             C = context.evaluator.multiply_plain(C, Plaintext)
             context.evaluator.relinearize_inplace(C, context.relin_keys)

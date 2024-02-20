@@ -15,13 +15,14 @@ if __name__ == "__main__":
     m4_model = torch.load(current_dir + '/models/M4_model.pth', map_location=torch.device('cpu'))
 
     MNIST_Img = Cuboid(1, 32, 32)
-    context = Context()
+
+    context = sys.argv[1]
 
     HE_m4 = HE_CNN(m4_model, MNIST_Img, context)
     # print(HE_m4)
     # print('='*50)
 
-    num_of_data = int(NUMBER_OF_SLOTS // HE_m4.data_size)
+    num_of_data = int(context.number_of_slots // HE_m4.data_size)
     
     transform = transforms.Compose([
         transforms.Resize((32, 32)),
