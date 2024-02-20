@@ -1,5 +1,4 @@
 from uni_henn import *
-from uni_henn.he_cnn import HE_CNN
 from models.model_structures import M4
 
 from seal import *
