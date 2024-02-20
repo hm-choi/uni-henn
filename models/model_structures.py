@@ -6,15 +6,15 @@ def _approximated_ReLU(x):
 class Square(torch.nn.Module):
     def forward(self, x):
         return x**2
-    
+
 class ApproxReLU(torch.nn.Module):
     def forward(self, x):
         return _approximated_ReLU(x)
-    
+
 class Flatten(torch.nn.Module):
     def forward(self, x):
         return torch.flatten(x, 1)
-    
+
 class M1(torch.nn.Module):
     def __init__(self, hidden=64, output=10):
         super(M1, self).__init__()
@@ -33,7 +33,7 @@ class M1(torch.nn.Module):
         out = self.Square2(out)
         out = self.FC2(out)
         return out
-    
+
 class M2(torch.nn.Module):
     def __init__(self):
         super(M2, self).__init__()
@@ -56,7 +56,7 @@ class M2(torch.nn.Module):
         out = self.Flatten(out)
         out = self.FC1(out)
         return out
-    
+
 class M3(torch.nn.Module):
     def __init__(self):
         super(M3, self).__init__()
@@ -77,7 +77,7 @@ class M3(torch.nn.Module):
         out = self.ApproxReLU2(out)
         out = self.FC2(out)
         return out
-    
+
 class M4(torch.nn.Module):
     def __init__(self, hidden=84, output=10):
         super(M4, self).__init__()
@@ -108,7 +108,7 @@ class M4(torch.nn.Module):
         out = self.Square4(out)
         out = self.FC2(out)
         return out
-    
+
 class M5(torch.nn.Module):
     def __init__(self, output=10):
         super(M5, self).__init__()
@@ -147,7 +147,7 @@ class M5(torch.nn.Module):
         out = self.Flatten(out)
         out = self.FC1(out)
         return out
-    
+
 class M6(torch.nn.Module):
     def __init__(self):
         super(M6, self).__init__()
@@ -169,10 +169,10 @@ class M6(torch.nn.Module):
         out = self.Square2(out)
         out = self.FC2(out)
         return out
-    
-class M7(torch.nn.Module):
+
+class M6(torch.nn.Module):
     def __init__(self):
-        super(M7, self).__init__()
+        super(M6, self).__init__()
         self.Conv1 = torch.nn.Conv1d(in_channels=1, out_channels=2, kernel_size=2, stride=2, padding=0)
         self.Square1 = Square()        
         self.Conv2 = torch.nn.Conv1d(in_channels=2, out_channels=4, kernel_size=2, stride=2, padding=0)
@@ -180,7 +180,7 @@ class M7(torch.nn.Module):
         self.FC1 = torch.nn.Linear(128, 32)
         self.Square2 = Square()
         self.FC2 = torch.nn.Linear(32, 5)
-        
+
     def forward(self, x):
         out = self.Conv1(x)
         out = self.Square1(out)

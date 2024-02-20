@@ -124,9 +124,6 @@ class HE_CNN(torch.nn.Module):
             CHECK_TIME.append(time.time())
             print('Drop depth TIME\t %.3f sec' %(CHECK_TIME[_order] - START_TIME))
         
-        # layer_outputs = []
-        # layer_outputs.append(self.decrypt(Out.ciphertexts))
-
         for layer_name, layer in self.model.named_children():
             layer_params = getattr(self.model, layer_name)
             
@@ -161,7 +158,6 @@ class HE_CNN(torch.nn.Module):
             elif layer.__class__.__name__ == 'Linear':
                 Out.ciphertexts[0] = fc_layer_converter(self.context, Out.ciphertexts[0], layer_params, self.data_size)
 
-            # layer_outputs.append(self.decrypt(Out.ciphertexts))
             if _time:
                 CHECK_TIME.append(time.time())
                 _order += 1
@@ -174,28 +170,6 @@ class HE_CNN(torch.nn.Module):
             END_TIME = time.time()
             print('Total Time\t %.3f sec' %(END_TIME - START_TIME))
             print('='*50)
-
-        # import numpy as np
-        # df = pd.DataFrame()
-        
-        # # Calculate max_len before the loop
-        # max_len = max(len(np.array(layer_output).flatten()) for layer_output in layer_outputs)
-
-        # for i, layer_output in enumerate(layer_outputs):
-        #     flattened_output = np.array(layer_output).flatten()
-
-        #     # Padding with -1 if necessary
-        #     if len(flattened_output) < max_len:
-        #         flattened_output = np.pad(flattened_output, (0, max_len - len(flattened_output)), constant_values=12345)
-
-        #     # Set column name dynamically based on 'i'
-        #     column_name = f"{i}-th output"
-
-        #     # Assign flattened output to the DataFrame
-        #     df[column_name] = flattened_output
-
-        # # Save DataFrame to CSV
-        # df.to_csv('layer_outputs.csv', index=False)
 
         return Out.ciphertexts[0]
                 

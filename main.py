@@ -10,7 +10,6 @@ if __name__ == "__main__":
             '3': 'example/M3_test.py',
             '4': 'example/M4_test.py',
             '5': 'example/M5_test.py',
-            '6': 'example/M6_test.py',
-            '7': 'example/M7_test.py',}
+            '6': 'example/M6_test.py',}
 
     exec(open(files[sys.argv[1]]).read())
