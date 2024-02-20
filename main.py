@@ -14,8 +14,8 @@ if __name__ == "__main__":
     @param LogP     Fraction log scale + Integer log scale  (default: 40)
     @param scale    Scale value used in ecoding             (default: 2**LogQ)
     """
-    context = Context(N = 2**14, depth = 8, LogQ = 40, LogP = 60)
-    # context = Context()
+    # context = Context(N = 2**14, depth = 8, LogQ = 40, LogP = 60)
+    context = Context()
     
     files = {'1': 'example/M1_test.py',
             '2': 'example/M2_test.py',
