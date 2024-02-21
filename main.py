@@ -3,8 +3,13 @@ from uni_henn.utils.context import Context
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Please input argv")
-        exit(0)
+        raise ValueError("Please input argv.")
+    elif len(sys.argv) > 2:
+        raise ValueError("Please input only one argv.")
+
+    file_type = int(sys.argv[1])
+    if file_type < 1 or file_type > 6:
+        raise ValueError("Incorrect file type. Please input between 1 and 6.")
 
     """
     When creating a context, you can adjust several parameters.
@@ -17,16 +22,16 @@ if __name__ == "__main__":
     # context = Context(N = 2**14, depth = 8, LogQ = 40, LogP = 60)
     context = Context()
     
-    files = {'1': 'example/M1_test.py',
-            '2': 'example/M2_test.py',
-            '3': 'example/M3_test.py',
-            '4': 'example/M4_test.py',
-            '5': 'example/M5_test.py',
-            '6': 'example/M6_test.py',}
+    files = ['example/M1_test.py',
+             'example/M2_test.py',
+             'example/M3_test.py',
+             'example/M4_test.py',
+             'example/M5_test.py',
+             'example/M6_test.py']
     
-    TestFile = open(files[sys.argv[1]])
-    TestCode = TestFile.read()
+    test_filename = files[file_type - 1]
+    with open(test_filename) as test_file:
+        test_code = test_file.read()
 
-    sys.argv = [files[sys.argv[1]], context]
-    exec(TestCode)
-    TestFile.close()
+    sys.argv = [test_filename, context]
+    exec(test_code)

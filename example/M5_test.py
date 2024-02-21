@@ -69,10 +69,3 @@ if __name__ == "__main__":
         After calculating the sum of errors between the results of the original model and the model with homomorphic encryption applied, Outputting whether it matches the original results.
         """        
         print('%sth result Error: %.8f\t| Result is %s' %(str(i+1), sum, "Correct" if origin_result == he_result else "Wrong"))
-
-        # print(i+1, 'th result')
-        # print("Error          |", sum)
-        # print("original label |", max_data_idx)
-        # print("HE label       |", max_ctxt_idx)
-        # print("real label     |", _label[i])
-        # print("="*30)
