@@ -1,13 +1,25 @@
 from uni_henn import *
-from uni_henn.he_cnn import HE_CNN
 from models.model_structures import M6
 
 from seal import *
-from torchvision import datasets
 import numpy as np
 import torch
 
 import os
+import h5py
+
+class ECG(torch.utils.data.Dataset):
+    def __init__(self, mode='test'):
+        if mode == 'test':
+            with h5py.File('./Data/test_ecg.hdf5', 'r') as hdf:
+                self.x = hdf['x_test'][:]
+                self.y = hdf['y_test'][:]
+    
+    def __len__(self):
+        return len(self.x)
+    
+    def __getitem__(self, idx):
+        return torch.tensor(self.x[idx], dtype=torch.float), torch.tensor(self.y[idx])
 
 if __name__ == "__main__":
     current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -15,27 +27,23 @@ if __name__ == "__main__":
     m6_model = M6()
     m6_model = torch.load(current_dir + '/models/M6_model.pth', map_location=torch.device('cpu'))
 
-    USPS_Img = Cuboid(1, 16, 16)
-    context = Context()
+    ECG_Img = Cuboid(1, 1, 128)
 
-    HE_m6 = HE_CNN(m6_model, USPS_Img, context)
+    context = sys.argv[1]
+
+    HE_m6 = HE_CNN(m6_model, ECG_Img, context)
     # print(HE_m6)
     # print('='*50)
 
-    num_of_data = int(NUMBER_OF_SLOTS // HE_m6.data_size)
+    num_of_data = int(context.number_of_slots // HE_m6.data_size)
    
-    test_dataset = datasets.USPS(
-        root=current_dir + '/Data', 
-        train=False, 
-        transform=TRANSFORM,
-        download=True
-    )
-    test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=num_of_data, shuffle=True, drop_last=True)
+    test_dataset = ECG(mode = 'test')
+    test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=num_of_data, shuffle=True)
 
     data, _label = next(iter(test_loader))
     _label = _label.tolist()
 
-    ppData = preprocessing(np.array(data), USPS_Img, num_of_data, HE_m6.data_size)
+    ppData = preprocessing(np.array(data), ECG_Img, num_of_data, HE_m6.data_size)
 
     ciphertext_list = HE_m6.encrypt(ppData)
  
@@ -52,7 +60,7 @@ if __name__ == "__main__":
         he_result = -1
         MIN_VALUE = -1e10
         sum = 0
-        for idx in range(10):
+        for idx in range(5):
             he_output = result_plaintext[idx + HE_m6.data_size*i]
 
             sum = sum + np.abs(origin_results[idx] - he_output)
@@ -65,10 +73,3 @@ if __name__ == "__main__":
         After calculating the sum of errors between the results of the original model and the model with homomorphic encryption applied, Outputting whether it matches the original results.
         """        
         print('%sth result Error: %.8f\t| Result is %s' %(str(i+1), sum, "Correct" if origin_result == he_result else "Wrong"))
-
-        # print(i+1, 'th result')
-        # print("Error          |", sum)
-        # print("original label |", max_data_idx)
-        # print("HE label       |", max_ctxt_idx)
-        # print("real label     |", _label[i])
-        # print("="*30)

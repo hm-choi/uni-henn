@@ -2,8 +2,7 @@ from seal import *
 import math
 import numpy as np
 
-from uni_henn.constants import NUMBER_OF_SLOTS, SCALE
-from uni_henn.utils.module import Context
+from uni_henn.utils.context import Context
 from uni_henn.utils.structure import Output, Cuboid, Rectangle
 
 def flatten(context: Context, In: Output, Img: Cuboid, data_size):
@@ -38,12 +37,12 @@ def flatten(context: Context, In: Output, Img: Cuboid, data_size):
             coeff = [In.const] + [0]*(Img.w * In.interval.h - 1)
             coeff = coeff * In.size.h
             coeff = coeff + [0] * (data_size - len(coeff))
-            coeff = coeff * (NUMBER_OF_SLOTS // data_size)
-            coeff = coeff + [0] * (NUMBER_OF_SLOTS - len(coeff))
+            coeff = coeff * (context.number_of_slots // data_size)
+            coeff = coeff + [0] * (context.number_of_slots - len(coeff))
 
             for i in range(In.size.h):
                 rot_coeff = np.roll(coeff, In.interval.w * i).tolist()
-                encoded_coeff = context.encoder.encode(rot_coeff, SCALE)
+                encoded_coeff = context.encoder.encode(rot_coeff, context.scale)
                 context.evaluator.mod_switch_to_inplace(encoded_coeff, C.parms_id())
                 mult_C = context.evaluator.multiply_plain(C, encoded_coeff)
                 context.evaluator.relinearize_inplace(mult_C, context.relin_keys)
@@ -72,12 +71,12 @@ def flatten(context: Context, In: Output, Img: Cuboid, data_size):
             coeff = [1]*In.interval.w + [0]*(Img.w * In.interval.h - In.interval.w)
             coeff = coeff * In.size.h
             coeff = coeff + [0] * (data_size - len(coeff))
-            coeff = coeff * (NUMBER_OF_SLOTS // data_size)
+            coeff = coeff * (context.number_of_slots // data_size)
             
             num_rot = math.ceil(In.size.w / In.interval.w)
             for i in range(num_rot):
                 rot_coeff = np.roll(coeff, In.interval.w**2 * i).tolist()
-                encoded_coeff = context.encoder.encode(rot_coeff, SCALE)
+                encoded_coeff = context.encoder.encode(rot_coeff, context.scale)
                 context.evaluator.mod_switch_to_inplace(encoded_coeff, C.parms_id())
                 mult_C = context.evaluator.multiply_plain(C, encoded_coeff)
                 context.evaluator.relinearize_inplace(mult_C, context.relin_keys)
@@ -101,10 +100,10 @@ def flatten(context: Context, In: Output, Img: Cuboid, data_size):
             tmp_list = []
             for i in range(In.size.h):
                 coeff = [1]*In.size.w + [0]*(data_size - In.size.w)
-                coeff = np.array(coeff * (NUMBER_OF_SLOTS//len(coeff)))
+                coeff = np.array(coeff * (context.number_of_slots//len(coeff)))
                 coeff = np.roll(coeff, Img.w * In.interval.h * i)
 
-                encoded_coeff = context.encoder.encode(coeff, SCALE)
+                encoded_coeff = context.encoder.encode(coeff, context.scale)
                 context.evaluator.mod_switch_to_inplace(encoded_coeff, C.parms_id()) 
                 temp = context.evaluator.multiply_plain(C, encoded_coeff)
                 context.evaluator.relinearize_inplace(temp, context.relin_keys)

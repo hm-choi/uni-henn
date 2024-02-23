@@ -1,7 +1,6 @@
 from seal import *
 
-from uni_henn.constants import NUMBER_OF_SLOTS, SCALE
-from uni_henn.utils.module import Context
+from uni_henn.utils.context import Context
 from uni_henn.utils.structure import Output
 
 def approximated_ReLU_converter(context:Context, In: Output):
@@ -20,9 +19,9 @@ def approximated_ReLU_converter(context:Context, In: Output):
     Returns:
         - Applied result of the approximated ReLU
     """
-    coeff1 = [0.117071 * (In.const**2)] * NUMBER_OF_SLOTS
-    coeff2 = [0.5 * In.const] * NUMBER_OF_SLOTS
-    coeff3 = [0.375373] * NUMBER_OF_SLOTS
+    coeff1 = [0.117071 * (In.const**2)] * context.number_of_slots
+    coeff2 = [0.5 * In.const] * context.number_of_slots
+    coeff3 = [0.375373] * context.number_of_slots
 
     Out = Output(
         ciphertexts = [],
@@ -31,7 +30,7 @@ def approximated_ReLU_converter(context:Context, In: Output):
         const = 1
     )
     for C in In.ciphertexts:
-        encoded_coeff1 = context.encoder.encode(coeff1, SCALE)
+        encoded_coeff1 = context.encoder.encode(coeff1, context.scale)
         context.evaluator.mod_switch_to_inplace(encoded_coeff1, C.parms_id())
         C_out = context.evaluator.multiply_plain(C, encoded_coeff1)
         context.evaluator.relinearize_inplace(C_out, context.relin_keys)

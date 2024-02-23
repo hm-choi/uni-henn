@@ -1,5 +1,4 @@
 from uni_henn import *
-from uni_henn.he_cnn import HE_CNN
 from models.model_structures import M2
 
 from seal import *
@@ -16,13 +15,14 @@ if __name__ == "__main__":
     m2_model = torch.load(current_dir + '/models/M2_model.pth', map_location=torch.device('cpu'))
 
     MNIST_Img = Cuboid(1, 28, 28)
-    context = Context()
+    
+    context = sys.argv[1]
 
     HE_m2 = HE_CNN(m2_model, MNIST_Img, context)
     # print(HE_m2)
     # print('='*50)
 
-    num_of_data = int(NUMBER_OF_SLOTS // HE_m2.data_size)
+    num_of_data = int(context.number_of_slots // HE_m2.data_size)
    
     test_dataset = datasets.MNIST(
         root=current_dir + '/Data', 
@@ -65,10 +65,3 @@ if __name__ == "__main__":
         After calculating the sum of errors between the results of the original model and the model with homomorphic encryption applied, Outputting whether it matches the original results.
         """        
         print('%sth result Error: %.8f\t| Result is %s' %(str(i+1), sum, "Correct" if origin_result == he_result else "Wrong"))
-
-        # print(i+1, 'th result')
-        # print("Error          |", sum)
-        # print("original label |", max_data_idx)
-        # print("HE label       |", max_ctxt_idx)
-        # print("real label     |", _label[i])
-        # print("="*30)

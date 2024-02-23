@@ -2,8 +2,7 @@ from seal import *
 import math
 import numpy as np
 
-from uni_henn.constants import NUMBER_OF_SLOTS, SCALE
-from uni_henn.utils.module import Context
+from uni_henn.utils.context import Context
 
 def rotate_in_subspace(context: Context, C_outs: list, weight, ciphertext, rot_n, I_rot, data_size):
     """
@@ -28,17 +27,17 @@ def rotate_in_subspace(context: Context, C_outs: list, weight, ciphertext, rot_n
     
     coeff1 = weight[:I_rot-rot_n]
     coeff1 = coeff1 + ([0]*(data_size - len(coeff1)))
-    coeff1 = coeff1 * (NUMBER_OF_SLOTS//len(coeff1))
-    coeff1 = coeff1 + [0]*(NUMBER_OF_SLOTS - len(coeff1))
+    coeff1 = coeff1 * (context.number_of_slots//len(coeff1))
+    coeff1 = coeff1 + [0]*(context.number_of_slots - len(coeff1))
 
     coeff2 = [0]*(I_rot-rot_n) + weight[I_rot-rot_n:I_rot]
     coeff2 = coeff2 + ([0]*(data_size - len(coeff2)))
-    coeff2 = coeff2 * (NUMBER_OF_SLOTS // len(coeff2))
-    coeff2 = coeff2 + [0]*(NUMBER_OF_SLOTS - len(coeff2))
+    coeff2 = coeff2 * (context.number_of_slots // len(coeff2))
+    coeff2 = coeff2 + [0]*(context.number_of_slots - len(coeff2))
         
     if any(coeff1):
         ctxt_rot_n_pos = context.evaluator.rotate_vector(ciphertext, rot_n, context.galois_key)
-        encoded_coeff = context.encoder.encode(coeff1, SCALE)
+        encoded_coeff = context.encoder.encode(coeff1, context.scale)
         context.evaluator.mod_switch_to_inplace(encoded_coeff, ctxt_rot_n_pos.parms_id())
         result1 = context.evaluator.multiply_plain(ctxt_rot_n_pos, encoded_coeff)
         context.evaluator.relinearize_inplace(result1, context.relin_keys)
@@ -47,7 +46,7 @@ def rotate_in_subspace(context: Context, C_outs: list, weight, ciphertext, rot_n
 
     if any(coeff2):
         ctxt_rot_n_neg = context.evaluator.rotate_vector(ciphertext, ((-1)*I_rot + rot_n), context.galois_key)
-        encoded_coeff = context.encoder.encode(coeff2, SCALE)
+        encoded_coeff = context.encoder.encode(coeff2, context.scale)
         context.evaluator.mod_switch_to_inplace(encoded_coeff, ctxt_rot_n_neg.parms_id())
         result2 = context.evaluator.multiply_plain(ctxt_rot_n_neg, encoded_coeff)
         context.evaluator.relinearize_inplace(result2, context.relin_keys)
@@ -106,7 +105,7 @@ def fc_layer_converter(context: Context, C_in, layer, data_size):
     all_addition = context.evaluator.add_many(tmp_list)
     
     bias_list = layer.bias.detach().tolist() + [0]*(data_size-len(layer.bias.tolist()))  
-    bias_list = bias_list*(NUMBER_OF_SLOTS // len(bias_list))
+    bias_list = bias_list*(context.number_of_slots // len(bias_list))
 
     sss = context.encoder.encode(bias_list, all_addition.scale())
     context.evaluator.mod_switch_to_inplace(sss, all_addition.parms_id())

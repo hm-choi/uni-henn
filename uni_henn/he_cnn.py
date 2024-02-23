@@ -5,6 +5,7 @@ from .constants import *
 import torch
 import math
 import time
+import sys
 
 class HE_CNN(torch.nn.Module):
     """
@@ -60,7 +61,6 @@ class HE_CNN(torch.nn.Module):
             elif layer.__class__.__name__ == 'Linear':
                 req_depth += 1
             
-        
         return req_depth
 
     def calculate_data_size(self):
@@ -82,32 +82,52 @@ class HE_CNN(torch.nn.Module):
             
         return data_size
     
-    def encrypt(self, plaintext_list: list):
-        ciphertext_list = []
-        for plaintext in plaintext_list:
-            ciphertext_list.append(
-                self.context.encryptor.encrypt(
-                    self.context.encoder.encode(plaintext, SCALE)
+    def encrypt(self, plaintext):
+        if type(plaintext) != list:
+            return self.context.encryptor.encrypt(
+                        self.context.encoder.encode(plaintext, self.context.scale)
+                    )
+        else:
+            ciphertext_list = []
+            for plain in plaintext:
+                ciphertext_list.append(
+                    self.context.encryptor.encrypt(
+                        self.context.encoder.encode(plain, self.context.scale)
+                    )
                 )
-            )
-        return ciphertext_list
+            return ciphertext_list
     
     def decrypt(self, ciphertext):
-        return self.context.encoder.decode(
-                    self.context.decryptor.decrypt(ciphertext)
+        if type(ciphertext) != list:
+            return self.context.encoder.decode(
+                        self.context.decryptor.decrypt(ciphertext)
+                    ).tolist()
+        else:
+            plaintext_list = []
+            for cipher in ciphertext:
+                plaintext_list.append(
+                    self.context.encoder.decode(
+                        self.context.decryptor.decrypt(cipher)
+                    ).tolist()
                 )
+            return plaintext_list
     
     def forward(self, C_in: list, _time=False):
+        req_depth = self.calculate_depth()
+        
+        if req_depth > self.context.depth:
+            raise ValueError("There is not enough depth to infer the current model.")
+
         if _time:
             START_TIME = time.time()
-        C_out = re_depth(self.context, C_in, DEPTH - self.calculate_depth())
+        C_out = re_depth(self.context, C_in, self.context.depth - req_depth)
         Out = Output(C_out, self.Img)
         if _time:
             _order = 0
             CHECK_TIME = []
             CHECK_TIME.append(time.time())
             print('Drop depth TIME\t %.3f sec' %(CHECK_TIME[_order] - START_TIME))
-
+        
         for layer_name, layer in self.model.named_children():
             layer_params = getattr(self.model, layer_name)
             
