@@ -1,6 +1,6 @@
 ![poster](./image.png)
 
-Official repository for **UniHENN: Designing More Versatile Homomorphic Encryption-based CNNs without im2col**  by Hyunmin Choi<sup>1 <sup>2, Jihun Kim<sup>2, Seungho Kim<sup>2, Seonhye Park<sup>2, Jeongyong Park<sup>2 <sup>3, Wonbin Choi<sup>1, Hyoungshick Kim<sup>2 
+Official repository for **UniHENN: Designing More Versatile Homomorphic Encryption-based CNNs without im2col**  by Hyunmin Choi<sup>1<sup> <sup>2<sup>, Jihun Kim<sup>2<sup>, Seungho Kim<sup>2<sup>, Seonhye Park<sup>2<sup>, Jeongyong Park<sup>2<sup> <sup>3<sup>, Wonbin Choi<sup>1<sup>, Hyoungshick Kim<sup>2<sup> 
 
 <sup>1 NAVER Cloud, South Korea
 <sup>2 Sungkyunkwan University, South Korea
