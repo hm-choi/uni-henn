@@ -10,6 +10,8 @@ Hyunmin Choi<sup>1,2</sup>, Jihun Kim<sup>2</sup>, Seungho Kim<sup>2</sup>, Seon
 
 ** Corresponding author
 
+You can read the paper here: [ArXiv Link](https://arxiv.org/abs/2402.03060)
+
 ## Designing Faster and More Versatile Homomorpic Encryption-based CNNs
 UniHENN is a Python package that provides Homomorphic Encryption(HE)-based CNN inference. 
 It provides the following features:
