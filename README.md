@@ -2,11 +2,11 @@
 
 Official repository for **UniHENN: Designing More Versatile Homomorphic Encryption-based CNNs without im2col**  
 by
-Hyunmin Choi<sup>1,2<sup>, Jihun Kim<sup>2<sup>, Seungho Kim<sup>2<sup>, Seonhye Park<sup>2<sup>, Jeongyong Park<sup>2,3<sup>, Wonbin Choi<sup>1<sup>, and Hyoungshick Kim<sup>1<sup>
+Hyunmin Choi<sup>1,2</sup>, Jihun Kim<sup>2</sup>, Seungho Kim<sup>2</sup>, Seonhye Park<sup>2</sup>, Jeongyong Park<sup>2,3</sup>, Wonbin Choi<sup>1</sup>, and Hyoungshick Kim<sup>2</sup>
 
-<sup>1<sup> NAVER Cloud, South Korea
-<sup>2<sup> Sungkyunkwan University, South Korea
-<sup>3<sup> Samsung Electronics, South Korea
+<sup>1</sup> NAVER Cloud, South Korea
+<sup>2</sup> Sungkyunkwan University, South Korea
+<sup>3</sup> Samsung Electronics, South Korea
 
 ## Designing Faster and More Versatile Homomorpic Encryption-based CNNs
 UniHENN is a Python package that provides Homomorphic Encryption(HE)-based CNN inference. 
