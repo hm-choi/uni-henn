@@ -24,3 +24,27 @@ def re_depth(context: Context, C_in: list, count):
             context.evaluator.rescale_to_next_inplace(C)
         C_out.append(C)
     return C_out
+
+def copy_ciphertext(context: Context, Ciphertext, data_size):
+    # C_1 = Ciphertext.copy()
+    data_num = context.number_of_slots // data_size
+    
+    # # 만약 data_num이 10이라면 10 -> 5 -> 4 -> 2 -> 1이므로
+    # # C_1 -> C_2 -> C_4 -> C_5 -> C_10 순으로 만들기
+    # counts = [data_num]
+    # while data_num > 1:
+    #     # counts의 맨 앞에 data_num을 추가        
+    #     if data_num % 2 == 0:
+    #         data_num = data_num // 2
+    #     else:
+    #         data_num = data_num - 1
+            
+    #     counts = [data_num] + counts
+    
+    for idx in range(1, data_num):
+        ciphertext_temp = context.evaluator.rotate_vector(
+            Ciphertext, -idx * data_size, context.galois_keys)
+        Ciphertext = context.evaluator.add(Ciphertext, ciphertext_temp)
+    return Ciphertext  
+        
+        
