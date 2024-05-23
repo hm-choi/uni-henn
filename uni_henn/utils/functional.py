@@ -43,7 +43,7 @@ def copy_ciphertext(context: Context, Ciphertext, data_size):
     
     for idx in range(1, data_num):
         ciphertext_temp = context.evaluator.rotate_vector(
-            Ciphertext, -idx * data_size, context.galois_keys)
+            Ciphertext, (-1) * idx * data_size, context.galois_key)
         Ciphertext = context.evaluator.add(Ciphertext, ciphertext_temp)
     return Ciphertext  
         
