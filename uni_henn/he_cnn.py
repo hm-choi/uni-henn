@@ -147,6 +147,7 @@ class HE_CNN(torch.nn.Module):
                 Out = average_pooling_layer_converter(
                     self.context, Out, self.Img, layer_params
                 )
+                return Out.ciphertexts[0]
             
             elif layer.__class__.__name__ == 'Square':
                 Out = square(
@@ -159,7 +160,7 @@ class HE_CNN(torch.nn.Module):
                 )
 
             elif layer.__class__.__name__ == 'Flatten':
-                Out = flatten(self.context, Out, self.Img, self.data_size)
+                Out = flatten(self.context, Out, self.Img, self.data_size, copy_count)
 
             elif layer.__class__.__name__ == 'Linear':
                 Out.ciphertexts[0] = fc_layer_converter(self.context, Out.ciphertexts[0], layer_params, self.data_size)

@@ -43,6 +43,15 @@ if __name__ == "__main__":
     result_ciphertext = HE_m2(ciphertext_list, _time=True)
 
     result_plaintext = HE_m2.decrypt(result_ciphertext)
+    
+    print(m2_model.forward_to_avg1(data).shape)
+
+    print(m2_model.forward_to_avg1(data)[0][0].flatten().tolist()[:10])
+    print(result_plaintext[:10])
+
+    print(m2_model.forward_to_avg1(data)[0][1].flatten().tolist()[:10])
+    print(result_plaintext[1024:1034])
+
 
     for i in range(num_of_data):
         """Model result without homomorphic encryption"""

@@ -126,59 +126,59 @@ def conv2d_layer_converter_one_data(context: Context, In: Output, Img: Cuboid, l
         const = 1
     )
 
-    req_copy_count = min(CH_out, context.number_of_slots // (CH_in * data_size))
-    
-    # print("data_size:", data_size, " / copy_count:", copy_count, " / req_copy_count:", req_copy_count)
+    data_num = context.number_of_slots // data_size         # LeNet-1: 8
+    one_cipher_data = min(CH_in, data_num // copy_count)    # LeNet-1: 1 / 4
+    req_copy_count = min(CH_out, data_num // CH_in)         # LeNet-1: 4 / 2
+    num_cipher = len(In.ciphertexts)                        # LeNet-1: 1 / 1
 
-    # print(context.encoder.decode(context.decryptor.decrypt(In.ciphertexts[0])).tolist()[200:210])
-    # print(context.encoder.decode(context.decryptor.decrypt(In.ciphertexts[0])).tolist()[data_size+200:data_size+210])
+    # print(context.encoder.decode(context.decryptor.decrypt(In.ciphertexts[0])).tolist()[0:10])
+    # print(context.encoder.decode(context.decryptor.decrypt(In.ciphertexts[0])).tolist()[one_cipher_data*data_size:one_cipher_data*copy_count*data_size+10])
 
-    for i, ciphertext in enumerate(In.ciphertexts):
-        In.ciphertexts[i] = copy_ciphertext(context, ciphertext, data_size * CH_in * copy_count, req_copy_count // copy_count)
+    for i in range(num_cipher):
+        In.ciphertexts[i] = copy_ciphertext(context, In.ciphertexts[i], data_size * CH_in * copy_count, req_copy_count // copy_count)
 
-    # print(context.encoder.decode(context.decryptor.decrypt(In.ciphertexts[0])).tolist()[200:210])
-    # print(context.encoder.decode(context.decryptor.decrypt(In.ciphertexts[0])).tolist()[data_size+200:data_size+210])
-    # print(context.encoder.decode(context.decryptor.decrypt(In.ciphertexts[0])).tolist()[2*data_size+200:2*data_size+210])
+    # print(context.encoder.decode(context.decryptor.decrypt(In.ciphertexts[0])).tolist()[0:10])
+    # print(context.encoder.decode(context.decryptor.decrypt(In.ciphertexts[0])).tolist()[one_cipher_data*copy_count*data_size:one_cipher_data*copy_count*data_size+10])
     
     C_rot = []
 
-    for i in range(CH_in):
+    for c1 in range(num_cipher):
         C_rot.append([])
         for p in range(K.h):
-            C_rot[i].append([])
+            C_rot[c1].append([])
             for q in range(K.w):
                 ciphertext = context.evaluator.rotate_vector(
-                    In.ciphertexts[i],
+                    In.ciphertexts[c1],
                     In.interval.h * Img.w * p + In.interval.w * q, 
                     context.galois_key
                 )
-                C_rot[i][p].append(ciphertext)
+                C_rot[c1][p].append(ciphertext)
     
     C_outs = []
-    # ciphertext 한개에 몇개의 데이터가 들어가는지 계산
-    # i =
     for c2 in range(CH_out // req_copy_count):
-        for c1 in range(len(In.ciphertexts)):
+        for c1 in range(num_cipher):
             for p in range(K.h):
                 for q in range(K.w):
                     """Vector of kernel"""
                     V_ker = []
-
-                    for o in range(req_copy_count):
-                        V_ker = V_ker + [layer.weight.detach().tolist()[c2 * req_copy_count + o][i][p][q] * In.const] + [0] * (Out.interval.w - 1)
-                        V_ker = V_ker * Out.size.w + [0] * (Img.w * Out.interval.h - Out.size.w * Out.interval.w)
-                        V_ker = V_ker * Out.size.h + [0] * (data_size - Img.w * Out.interval.h * Out.size.h)
-                        V_ker = V_ker * copy_count
-                    V_ker = V_ker * (context.number_of_slots // data_size)
-
+                    for i in range(one_cipher_data):
+                        in_channel = c1 * one_cipher_data + i
+                        for o in range(req_copy_count):
+                            out_channel = c2 * req_copy_count + o
+                            V_ker_plus = [layer.weight.detach().tolist()[out_channel][in_channel][p][q] * In.const] + [0] * (Out.interval.w - 1)
+                            V_ker_plus = V_ker_plus * Out.size.w + [0] * (Img.w * Out.interval.h - Out.size.w * Out.interval.w)
+                            V_ker_plus = V_ker_plus * Out.size.h + [0] * (data_size - Img.w * Out.interval.h * Out.size.h)
+                            V_ker_plus = V_ker_plus * copy_count
+                            V_ker = V_ker + V_ker_plus
+                    
                     Plaintext_ker = context.encoder.encode(V_ker, context.scale)
-                    context.evaluator.mod_switch_to_inplace(Plaintext_ker, C_rot[i][p][q].parms_id())
+                    context.evaluator.mod_switch_to_inplace(Plaintext_ker, C_rot[c1][p][q].parms_id())
 
                     """
                     This try-catch part is handling exceptions for errors that occur when multiplying the vector of 0.
                     """
                     try:
-                        ciphertext = context.evaluator.multiply_plain(C_rot[i][p][q], Plaintext_ker)
+                        ciphertext = context.evaluator.multiply_plain(C_rot[c1][p][q], Plaintext_ker)
                         context.evaluator.relinearize_inplace(ciphertext, context.relin_keys)
                         context.evaluator.rescale_to_next_inplace(ciphertext)
 
@@ -187,12 +187,22 @@ def conv2d_layer_converter_one_data(context: Context, In: Output, Img: Cuboid, l
                         print("Warning: An error occurred, but it's being ignored:", str(e))
         
         ciphertext = context.evaluator.add_many(C_outs)
+        rot = 1
+        while rot < one_cipher_data:
+            ciphertext_temp = context.evaluator.rotate_vector(
+                ciphertext, rot * data_size, context.galois_key)
+            ciphertext = context.evaluator.add(ciphertext, ciphertext_temp)
+            rot *= 2
 
         """Vector of bias"""            
-        V_bias = [layer.bias.detach().tolist()[o]] + [0] * (Out.interval.w - 1)  
-        V_bias = V_bias * Out.size.w + [0] * (Img.w * Out.interval.h - Out.size.w * Out.interval.w)
-        V_bias = V_bias * Out.size.h + [0] * (data_size - Img.w * Out.interval.h * Out.size.h)
-        V_bias = V_bias * (context.number_of_slots // data_size) 
+        V_bias = []
+        for o in range(req_copy_count):
+            out_channel = c2 * req_copy_count + o
+            V_bias_plus = [layer.bias.detach().tolist()[out_channel]] + [0] * (Out.interval.w - 1)
+            V_bias_plus = V_bias_plus * Out.size.w + [0] * (Img.w * Out.interval.h - Out.size.w * Out.interval.w)
+            V_bias_plus = V_bias_plus * Out.size.h + [0] * (data_size - Img.w * Out.interval.h * Out.size.h)
+            V_bias_plus = V_bias_plus * copy_count
+            V_bias = V_bias + V_bias_plus
 
         Plaintext_bias = context.encoder.encode(V_bias, ciphertext.scale())
         context.evaluator.mod_switch_to_inplace(Plaintext_bias, ciphertext.parms_id())

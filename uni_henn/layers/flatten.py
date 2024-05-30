@@ -5,7 +5,7 @@ import numpy as np
 from uni_henn.utils.context import Context
 from uni_henn.utils.structure import Output, Cuboid, Rectangle
 
-def flatten(context: Context, In: Output, Img: Cuboid, data_size):
+def flatten(context: Context, In: Output, Img: Cuboid, data_size, copy_count):
     """
     The function is used to concatenate between the convolution layer and the fully connected layer.
 
@@ -36,8 +36,8 @@ def flatten(context: Context, In: Output, Img: Cuboid, data_size):
 
             coeff = [In.const] + [0]*(Img.w * In.interval.h - 1)
             coeff = coeff * In.size.h
-            coeff = coeff + [0] * (data_size - len(coeff))
-            coeff = coeff * (context.number_of_slots // data_size)
+            coeff = coeff + [0] * (data_size * copy_count - len(coeff))
+            coeff = coeff * (context.number_of_slots // (data_size * copy_count))
             coeff = coeff + [0] * (context.number_of_slots - len(coeff))
 
             for i in range(In.size.h):
@@ -70,8 +70,9 @@ def flatten(context: Context, In: Output, Img: Cuboid, data_size):
 
             coeff = [1]*In.interval.w + [0]*(Img.w * In.interval.h - In.interval.w)
             coeff = coeff * In.size.h
-            coeff = coeff + [0] * (data_size - len(coeff))
-            coeff = coeff * (context.number_of_slots // data_size)
+            coeff = coeff + [0] * (data_size * copy_count - len(coeff))
+            coeff = coeff * (context.number_of_slots // (data_size * copy_count))
+            coeff = coeff + (context.number_of_slots - len(coeff))
             
             num_rot = math.ceil(In.size.w / In.interval.w)
             for i in range(num_rot):
@@ -90,16 +91,17 @@ def flatten(context: Context, In: Output, Img: Cuboid, data_size):
         C_in = gather_C_in
 
     # Removing the column interval
-    CH_in = len(C_in)
+    c1 = len(C_in)
+    one_cipher_data = (context.number_of_slots // data_size) // copy_count
     C_outs = []
-    for o in range(CH_in):
+    for o in range(c1):
         C = C_in[o]
         if In.size.h == 1:
             C_out = C
         else:
             tmp_list = []
             for i in range(In.size.h):
-                coeff = [1]*In.size.w + [0]*(data_size - In.size.w)
+                coeff = [1]*In.size.w + [0]*(data_size * copy_count - In.size.w)
                 coeff = np.array(coeff * (context.number_of_slots//len(coeff)))
                 coeff = np.roll(coeff, Img.w * In.interval.h * i)
 
@@ -121,13 +123,23 @@ def flatten(context: Context, In: Output, Img: Cuboid, data_size):
         C_outs.append(
             context.evaluator.rotate_vector(
                 C_out, 
-                (-1) * o * In.size.w * In.size.h,
+                (-1) * o * one_cipher_data * In.size.w * In.size.h,
                 context.galois_key
             )
         )
+    ciphertext = context.evaluator.add_many(C_outs)
+    rot = 1
+    while rot < one_cipher_data:
+        ciphertext_temp = context.evaluator.rotate_vector(
+            ciphertext,
+            rot * data_size * copy_count - rot * In.size.w * In.size.h,
+            context.galois_key
+        )
+        ciphertext = context.evaluator.add(ciphertext, ciphertext_temp)        
+        rot *= 2
 
     Out = Output(
-        ciphertexts = [context.evaluator.add_many(C_outs)],
+        ciphertexts = [ciphertext],
         size = Cuboid(1, 1, In.size.size3d()),
         interval = Rectangle(1, 1),
         const = 1

@@ -45,8 +45,8 @@ def average_pooling_layer_converter(context: Context, In: Output, Img: Cuboid, l
     )
 
     C_rot = []
-
-    for i in range(CH_in):
+    num_cipher = len(In.ciphertexts)
+    for i in range(num_cipher):
         C_rot.append([])
         for p in range(K.h):
             C_rot[i].append([])
@@ -57,7 +57,7 @@ def average_pooling_layer_converter(context: Context, In: Output, Img: Cuboid, l
                     context.galois_key)
                 C_rot[i][p].append(ciphertext)
 
-    for i in range(CH_in):
+    for i in range(num_cipher):
         Ciphtertexts = [] 
         for p in range(K.h):
             for q in range(K.w):
