@@ -80,7 +80,7 @@ class HE_CNN(torch.nn.Module):
                 if data_size < _size:
                     data_size = _size
             
-        return data_size
+        return smallest_power_of_two_geq(data_size)
     
     def encrypt(self, plaintext):
         if type(plaintext) != list:

@@ -22,6 +22,7 @@ if __name__ == "__main__":
     # print(HE_m2)
     # print('='*50)
 
+    print(HE_m2.data_size)
     # num_of_data = int(context.number_of_slots // HE_m2.data_size)
     num_of_data = 1
    
