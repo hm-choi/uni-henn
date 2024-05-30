@@ -25,18 +25,16 @@ def re_depth(context: Context, C_in: list, count):
         C_out.append(C)
     return C_out
 
-def copy_ciphertext(context: Context, Ciphertext, data_size):
+def copy_ciphertext(context: Context, Ciphertext, data_size, count):
     if data_size & (data_size - 1) != 0:
         raise ValueError("The data size must be a power of 2.")
 
-    data_num = context.number_of_slots // data_size
-
     idx = 1
-    while idx < data_num:
+    while idx < count:
         ciphertext_temp = context.evaluator.rotate_vector(
             Ciphertext, (-1) * idx * data_size, context.galois_key)
         Ciphertext = context.evaluator.add(Ciphertext, ciphertext_temp)
-        idx *= 1
+        idx *= 2
 
     return Ciphertext  
 

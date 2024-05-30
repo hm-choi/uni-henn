@@ -122,6 +122,8 @@ class HE_CNN(torch.nn.Module):
             START_TIME = time.time()
         C_out = re_depth(self.context, C_in, self.context.depth - req_depth)
         Out = Output(C_out, self.Img)
+        copy_count = 1
+
         if _time:
             _order = 0
             CHECK_TIME = []
@@ -132,8 +134,8 @@ class HE_CNN(torch.nn.Module):
             layer_params = getattr(self.model, layer_name)
             
             if layer.__class__.__name__ == 'Conv2d':
-                Out = conv2d_layer_converter_(
-                    self.context, Out, self.Img, layer_params, self.data_size
+                Out, copy_count = conv2d_layer_converter_(
+                    self.context, Out, self.Img, layer_params, self.data_size, copy_count
                 )
 
             elif layer.__class__.__name__ == 'Conv1d':
