@@ -134,7 +134,7 @@ class HE_CNN(torch.nn.Module):
             layer_params = getattr(self.model, layer_name)
             
             if layer.__class__.__name__ == 'Conv2d':
-                Out, copy_count = conv2d_layer_converter_(
+                Out, copy_count = conv2d_layer_converter_one_data(
                     self.context, Out, self.Img, layer_params, self.data_size, copy_count
                 )
 

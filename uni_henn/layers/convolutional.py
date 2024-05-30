@@ -126,15 +126,20 @@ def conv2d_layer_converter_one_data(context: Context, In: Output, Img: Cuboid, l
         const = 1
     )
 
-    print(context.encoder.decode(context.decryptor.decrypt(In.ciphertexts[0])).tolist()[0:10])
-
     req_copy_count = min(CH_out, context.number_of_slots // (CH_in * data_size))
-    for ciphertext in In.ciphertexts:
-        ciphertext = copy_ciphertext(context, ciphertext, data_size * CH_in * copy_count, req_copy_count // copy_count)
-
-    print(context.encoder.decode(context.decryptor.decrypt(In.ciphertexts[0])).tolist()[0:10])
     
+    # print("data_size:", data_size, " / copy_count:", copy_count, " / req_copy_count:", req_copy_count)
 
+    # print(context.encoder.decode(context.decryptor.decrypt(In.ciphertexts[0])).tolist()[200:210])
+    # print(context.encoder.decode(context.decryptor.decrypt(In.ciphertexts[0])).tolist()[data_size+200:data_size+210])
+
+    for i, ciphertext in enumerate(In.ciphertexts):
+        In.ciphertexts[i] = copy_ciphertext(context, ciphertext, data_size * CH_in * copy_count, req_copy_count // copy_count)
+
+    # print(context.encoder.decode(context.decryptor.decrypt(In.ciphertexts[0])).tolist()[200:210])
+    # print(context.encoder.decode(context.decryptor.decrypt(In.ciphertexts[0])).tolist()[data_size+200:data_size+210])
+    # print(context.encoder.decode(context.decryptor.decrypt(In.ciphertexts[0])).tolist()[2*data_size+200:2*data_size+210])
+    
     C_rot = []
 
     for i in range(CH_in):
@@ -149,15 +154,21 @@ def conv2d_layer_converter_one_data(context: Context, In: Output, Img: Cuboid, l
                 )
                 C_rot[i][p].append(ciphertext)
     
-    for o in range(CH_out):
-        C_outs = []
-        for i in range(CH_in):
+    C_outs = []
+    # ciphertext 한개에 몇개의 데이터가 들어가는지 계산
+    # i =
+    for c2 in range(CH_out // req_copy_count):
+        for c1 in range(len(In.ciphertexts)):
             for p in range(K.h):
                 for q in range(K.w):
                     """Vector of kernel"""
-                    V_ker = [layer.weight.detach().tolist()[o][i][p][q] * In.const] + [0] * (Out.interval.w - 1)
-                    V_ker = V_ker * Out.size.w + [0] * (Img.w * Out.interval.h - Out.size.w * Out.interval.w)
-                    V_ker = V_ker * Out.size.h + [0] * (data_size - Img.w * Out.interval.h * Out.size.h)
+                    V_ker = []
+
+                    for o in range(req_copy_count):
+                        V_ker = V_ker + [layer.weight.detach().tolist()[c2 * req_copy_count + o][i][p][q] * In.const] + [0] * (Out.interval.w - 1)
+                        V_ker = V_ker * Out.size.w + [0] * (Img.w * Out.interval.h - Out.size.w * Out.interval.w)
+                        V_ker = V_ker * Out.size.h + [0] * (data_size - Img.w * Out.interval.h * Out.size.h)
+                        V_ker = V_ker * copy_count
                     V_ker = V_ker * (context.number_of_slots // data_size)
 
                     Plaintext_ker = context.encoder.encode(V_ker, context.scale)
