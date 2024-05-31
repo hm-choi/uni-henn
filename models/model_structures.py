@@ -57,6 +57,16 @@ class M2(torch.nn.Module):
         out = self.FC1(out)
         return out
     
+    def forward_to_conv1(self, x):
+        out = self.Conv1(x)
+        return out
+    def forward_to_conv2(self, x):
+        out = self.Conv1(x)
+        out = self.Square1(out)
+        out = self.AvgPool1(out)
+        out = self.Conv2(out)
+        return out
+
     def forward_to_avg1(self, x):
         out = self.Conv1(x)
         out = self.Square1(out)

@@ -1,4 +1,5 @@
 from seal import *
+import time
 
 from uni_henn.utils.context import Context
 from uni_henn.utils.structure import Output, Cuboid, Rectangle
@@ -95,6 +96,8 @@ def conv2d_layer_converter_(context: Context, In: Output, Img: Cuboid, layer, da
         
         ciphertext = context.evaluator.add_many(C_outs)
 
+        print(context.encoder.decode(context.decryptor.decrypt(ciphertext)).tolist()[:10:2])
+
         """Vector of bias"""            
         V_bias = [layer.bias.detach().tolist()[o]] + [0] * (Out.interval.w - 1)  
         V_bias = V_bias * Out.size.w + [0] * (Img.w * Out.interval.h - Out.size.w * Out.interval.w)
@@ -126,19 +129,19 @@ def conv2d_layer_converter_one_data(context: Context, In: Output, Img: Cuboid, l
         const = 1
     )
 
-    data_num = context.number_of_slots // data_size         # LeNet-1: 8
+    data_num = context.number_of_slots // data_size         # LeNet-1: 8 / 8
     one_cipher_data = min(CH_in, data_num // copy_count)    # LeNet-1: 1 / 4
     req_copy_count = min(CH_out, data_num // CH_in)         # LeNet-1: 4 / 2
     num_cipher = len(In.ciphertexts)                        # LeNet-1: 1 / 1
 
-    # print(context.encoder.decode(context.decryptor.decrypt(In.ciphertexts[0])).tolist()[0:10])
-    # print(context.encoder.decode(context.decryptor.decrypt(In.ciphertexts[0])).tolist()[one_cipher_data*data_size:one_cipher_data*copy_count*data_size+10])
+    # print(context.encoder.decode(context.decryptor.decrypt(In.ciphertexts[0])).tolist()[:10])
+    # print(context.encoder.decode(context.decryptor.decrypt(In.ciphertexts[0])).tolist()[one_cipher_data*copy_count*data_size:one_cipher_data*copy_count*data_size+10])
 
     for i in range(num_cipher):
         In.ciphertexts[i] = copy_ciphertext(context, In.ciphertexts[i], data_size * CH_in * copy_count, req_copy_count // copy_count)
 
-    # print(context.encoder.decode(context.decryptor.decrypt(In.ciphertexts[0])).tolist()[0:10])
-    # print(context.encoder.decode(context.decryptor.decrypt(In.ciphertexts[0])).tolist()[one_cipher_data*copy_count*data_size:one_cipher_data*copy_count*data_size+10])
+    # print(context.encoder.decode(context.decryptor.decrypt(In.ciphertexts[0])).tolist()[:5])
+    # print(context.encoder.decode(context.decryptor.decrypt(In.ciphertexts[0])).tolist()[1024:1029])
     
     C_rot = []
 
@@ -154,23 +157,23 @@ def conv2d_layer_converter_one_data(context: Context, In: Output, Img: Cuboid, l
                 )
                 C_rot[c1][p].append(ciphertext)
     
-    C_outs = []
     for c2 in range(CH_out // req_copy_count):
+        C_outs = []
         for c1 in range(num_cipher):
             for p in range(K.h):
                 for q in range(K.w):
                     """Vector of kernel"""
                     V_ker = []
-                    for i in range(one_cipher_data):
-                        in_channel = c1 * one_cipher_data + i
-                        for o in range(req_copy_count):
-                            out_channel = c2 * req_copy_count + o
+                    for o in range(req_copy_count):
+                        out_channel = c2 * req_copy_count + o
+                        for i in range(one_cipher_data):
+                            in_channel = c1 * one_cipher_data + i
                             V_ker_plus = [layer.weight.detach().tolist()[out_channel][in_channel][p][q] * In.const] + [0] * (Out.interval.w - 1)
                             V_ker_plus = V_ker_plus * Out.size.w + [0] * (Img.w * Out.interval.h - Out.size.w * Out.interval.w)
                             V_ker_plus = V_ker_plus * Out.size.h + [0] * (data_size - Img.w * Out.interval.h * Out.size.h)
                             V_ker_plus = V_ker_plus * copy_count
                             V_ker = V_ker + V_ker_plus
-                    
+
                     Plaintext_ker = context.encoder.encode(V_ker, context.scale)
                     context.evaluator.mod_switch_to_inplace(Plaintext_ker, C_rot[c1][p][q].parms_id())
 
@@ -187,12 +190,20 @@ def conv2d_layer_converter_one_data(context: Context, In: Output, Img: Cuboid, l
                         print("Warning: An error occurred, but it's being ignored:", str(e))
         
         ciphertext = context.evaluator.add_many(C_outs)
+
+        # print(context.encoder.decode(context.decryptor.decrypt(ciphertext)).tolist()[:10:2])
+        # print(context.encoder.decode(context.decryptor.decrypt(ciphertext)).tolist()[1024:1034:2])
+        # print(context.encoder.decode(context.decryptor.decrypt(ciphertext)).tolist()[2048:2058:2])
+        # print(context.encoder.decode(context.decryptor.decrypt(ciphertext)).tolist()[3072:3082:2])
+        
+
         rot = 1
         while rot < one_cipher_data:
             ciphertext_temp = context.evaluator.rotate_vector(
                 ciphertext, rot * data_size, context.galois_key)
             ciphertext = context.evaluator.add(ciphertext, ciphertext_temp)
             rot *= 2
+        
 
         """Vector of bias"""            
         V_bias = []
@@ -201,7 +212,7 @@ def conv2d_layer_converter_one_data(context: Context, In: Output, Img: Cuboid, l
             V_bias_plus = [layer.bias.detach().tolist()[out_channel]] + [0] * (Out.interval.w - 1)
             V_bias_plus = V_bias_plus * Out.size.w + [0] * (Img.w * Out.interval.h - Out.size.w * Out.interval.w)
             V_bias_plus = V_bias_plus * Out.size.h + [0] * (data_size - Img.w * Out.interval.h * Out.size.h)
-            V_bias_plus = V_bias_plus * copy_count
+            V_bias_plus = V_bias_plus * one_cipher_data
             V_bias = V_bias + V_bias_plus
 
         Plaintext_bias = context.encoder.encode(V_bias, ciphertext.scale())

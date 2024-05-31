@@ -137,6 +137,16 @@ class HE_CNN(torch.nn.Module):
                 Out, copy_count = conv2d_layer_converter_one_data(
                     self.context, Out, self.Img, layer_params, self.data_size, copy_count
                 )
+                # if copy_count == 4:
+                # return Out.ciphertexts[0]
+
+            # if layer.__class__.__name__ == 'Conv2d':
+            #     Out = conv2d_layer_converter_(
+            #         self.context, Out, self.Img, layer_params, self.data_size
+            #     )
+            #     if len(Out.ciphertexts) == 12:
+            #         return Out.ciphertexts[0]
+
 
             elif layer.__class__.__name__ == 'Conv1d':
                 Out = conv1d_layer_converter_(
@@ -147,7 +157,6 @@ class HE_CNN(torch.nn.Module):
                 Out = average_pooling_layer_converter(
                     self.context, Out, self.Img, layer_params
                 )
-                return Out.ciphertexts[0]
             
             elif layer.__class__.__name__ == 'Square':
                 Out = square(

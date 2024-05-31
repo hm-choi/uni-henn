@@ -31,7 +31,7 @@ if __name__ == "__main__":
         transform=TRANSFORM,
         download=True
     )
-    test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=num_of_data, shuffle=True, drop_last=True)
+    test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=num_of_data, shuffle=False, drop_last=True)
 
     data, _label = next(iter(test_loader))
     _label = _label.tolist()
@@ -44,13 +44,15 @@ if __name__ == "__main__":
 
     result_plaintext = HE_m2.decrypt(result_ciphertext)
     
-    print(m2_model.forward_to_avg1(data).shape)
+    # print(m2_model.forward_to_conv1(data).shape)
 
-    print(m2_model.forward_to_avg1(data)[0][0].flatten().tolist()[:10])
-    print(result_plaintext[:10])
+    # print("first image")
+    # print((m2_model.forward_to_conv1(data)[0][1]).flatten().tolist()[0:10])
+    # print(result_plaintext[1024:1034:2])
 
-    print(m2_model.forward_to_avg1(data)[0][1].flatten().tolist()[:10])
-    print(result_plaintext[1024:1034])
+    # print("second image")
+    # print(m2_model.forward_to_conv1(data)[0][1].flatten().tolist()[72:82])
+    # print(result_plaintext[1024+84:1024+94])
 
 
     for i in range(num_of_data):
