@@ -22,7 +22,8 @@ if __name__ == "__main__":
     # print(HE_m4)
     # print('='*50)
 
-    num_of_data = int(context.number_of_slots // HE_m4.data_size)
+    # num_of_data = int(context.number_of_slots // HE_m4.data_size)
+    num_of_data = 1
     
     transform = transforms.Compose([
         transforms.Resize((32, 32)),
