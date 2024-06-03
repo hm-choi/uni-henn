@@ -22,7 +22,8 @@ if __name__ == "__main__":
     # print(HE_m1)
     # print('='*50)
 
-    num_of_data = int(context.number_of_slots // HE_m1.data_size)
+    # num_of_data = int(context.number_of_slots // HE_m1.data_size)
+    num_of_data = 1
    
     test_dataset = datasets.MNIST(
         root=root_dir + '/Data', 
