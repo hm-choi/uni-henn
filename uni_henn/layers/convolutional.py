@@ -153,7 +153,6 @@ def conv2d_layer_converter_one_data(context: Context, In: Output, Img: Cuboid, l
     C_rot = []
 
     for c1 in range(num_cipher):
-    for c1 in range(num_cipher):
         C_rot.append([])
         for p in range(K.h):
             C_rot[c1].append([])
