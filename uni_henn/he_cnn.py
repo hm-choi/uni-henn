@@ -133,10 +133,20 @@ class HE_CNN(torch.nn.Module):
         for layer_name, layer in self.model.named_children():
             layer_params = getattr(self.model, layer_name)
             
+            # if layer.__class__.__name__ == 'Conv2d':
+            #     Out, copy_count = conv2d_layer_converter_one_data(
+            #         self.context, Out, self.Img, layer_params, self.data_size, copy_count
+            #     )
+                # if copy_count == 4:
+                # return Out.ciphertexts[0]
+
             if layer.__class__.__name__ == 'Conv2d':
-                Out, copy_count = conv2d_layer_converter_one_data(
-                    self.context, Out, self.Img, layer_params, self.data_size, copy_count
+                Out = conv2d_layer_converter_(
+                    self.context, Out, self.Img, layer_params, self.data_size
                 )
+            #     if len(Out.ciphertexts) == 12:
+            #         return Out.ciphertexts[0]
+
 
             elif layer.__class__.__name__ == 'Conv1d':
                 Out = conv1d_layer_converter_(
@@ -159,7 +169,7 @@ class HE_CNN(torch.nn.Module):
                 )
 
             elif layer.__class__.__name__ == 'Flatten':
-                Out = flatten(self.context, Out, self.Img, self.data_size)
+                Out = flatten(self.context, Out, self.Img, self.data_size, copy_count)
 
             elif layer.__class__.__name__ == 'Linear':
                 Out.ciphertexts[0] = fc_layer_converter(self.context, Out.ciphertexts[0], layer_params, self.data_size)

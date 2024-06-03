@@ -25,18 +25,18 @@ def re_depth(context: Context, C_in: list, count):
         C_out.append(C)
     return C_out
 
-def copy_ciphertext(context: Context, Ciphertext, data_size, count):
+def copy_ciphertext(context: Context, ciphertext, data_size, count):
     if data_size & (data_size - 1) != 0:
         raise ValueError("The data size must be a power of 2.")
 
     idx = 1
     while idx < count:
         ciphertext_temp = context.evaluator.rotate_vector(
-            Ciphertext, (-1) * idx * data_size, context.galois_key)
-        Ciphertext = context.evaluator.add(Ciphertext, ciphertext_temp)
+            ciphertext, (-1) * idx * data_size, context.galois_key)
+        ciphertext = context.evaluator.add(ciphertext, ciphertext_temp)
         idx *= 2
 
-    return Ciphertext  
+    return ciphertext  
 
 def smallest_power_of_two_geq(n):
     if n <= 0:

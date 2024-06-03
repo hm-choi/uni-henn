@@ -21,7 +21,7 @@ class M1(torch.nn.Module):
         self.Conv1 = torch.nn.Conv2d(in_channels=1, out_channels=8, kernel_size=4, stride=3, padding=0)
         self.Square1 = Square()
         self.Flatten = Flatten()
-        self.FC1 = torch.nn.Linear(9 * 9 * 8, 64)
+        self.FC1 = torch.nn.Linear(648, 64)
         self.Square2 = Square()
         self.FC2 = torch.nn.Linear(64, 10)
 
@@ -55,6 +55,22 @@ class M2(torch.nn.Module):
         out = self.AvgPool2(out)
         out = self.Flatten(out)
         out = self.FC1(out)
+        return out
+    
+    def forward_to_conv1(self, x):
+        out = self.Conv1(x)
+        return out
+    def forward_to_conv2(self, x):
+        out = self.Conv1(x)
+        out = self.Square1(out)
+        out = self.AvgPool1(out)
+        out = self.Conv2(out)
+        return out
+
+    def forward_to_avg1(self, x):
+        out = self.Conv1(x)
+        out = self.Square1(out)
+        out = self.AvgPool1(out)
         return out
 
 class M3(torch.nn.Module):
