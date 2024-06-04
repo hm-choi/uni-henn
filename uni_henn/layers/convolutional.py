@@ -142,8 +142,6 @@ def conv2d_layer_converter_one_data(context: Context, In: Output, Img: Cuboid, l
 
     for i in range(num_cipher):
         In.ciphertexts[i] = copy_ciphertext(context, In.ciphertexts[i], data_size * min(CH_in * copy_count, data_num), req_copy_count // copy_count)
-    for i in range(num_cipher):
-        In.ciphertexts[i] = copy_ciphertext(context, In.ciphertexts[i], data_size * min(CH_in * copy_count, data_num), req_copy_count // copy_count)
 
     # print(context.encoder.decode(context.decryptor.decrypt(In.ciphertexts[0])).tolist()[:5])
     # print(context.encoder.decode(context.decryptor.decrypt(In.ciphertexts[0])).tolist()[1024:1029])
@@ -156,14 +154,12 @@ def conv2d_layer_converter_one_data(context: Context, In: Output, Img: Cuboid, l
         C_rot.append([])
         for p in range(K.h):
             C_rot[c1].append([])
-            C_rot[c1].append([])
             for q in range(K.w):
                 ciphertext = context.evaluator.rotate_vector(
                     In.ciphertexts[c1],
                     In.interval.h * Img.w * p + In.interval.w * q,
                     context.galois_key
                 )
-                C_rot[c1][p].append(ciphertext)
                 C_rot[c1][p].append(ciphertext)
     
     for c2 in range(CH_out // (copy_count * req_copy_count)):
@@ -188,13 +184,11 @@ def conv2d_layer_converter_one_data(context: Context, In: Output, Img: Cuboid, l
 
                     Plaintext_ker = context.encoder.encode(V_ker, context.scale)
                     context.evaluator.mod_switch_to_inplace(Plaintext_ker, C_rot[c1][p][q].parms_id())
-                    context.evaluator.mod_switch_to_inplace(Plaintext_ker, C_rot[c1][p][q].parms_id())
 
                     """
                     This try-catch part is handling exceptions for errors that occur when multiplying the vector of 0.
                     """
                     try:
-                        ciphertext = context.evaluator.multiply_plain(C_rot[c1][p][q], Plaintext_ker)
                         ciphertext = context.evaluator.multiply_plain(C_rot[c1][p][q], Plaintext_ker)
                         context.evaluator.relinearize_inplace(ciphertext, context.relin_keys)
                         context.evaluator.rescale_to_next_inplace(ciphertext)
@@ -219,14 +213,6 @@ def conv2d_layer_converter_one_data(context: Context, In: Output, Img: Cuboid, l
         
 
         """Vector of bias"""            
-        V_bias = []
-        for o in range(req_copy_count):
-            out_channel = c2 * req_copy_count + o
-            V_bias_plus = [layer.bias.detach().tolist()[out_channel]] + [0] * (Out.interval.w - 1)
-            V_bias_plus = V_bias_plus * Out.size.w + [0] * (Img.w * Out.interval.h - Out.size.w * Out.interval.w)
-            V_bias_plus = V_bias_plus * Out.size.h + [0] * (data_size - Img.w * Out.interval.h * Out.size.h)
-            V_bias_plus = V_bias_plus * min(one_cipher_data, data_num)
-            V_bias = V_bias + V_bias_plus
         V_bias = []
         for o in range(req_copy_count):
             out_channel = c2 * req_copy_count + o

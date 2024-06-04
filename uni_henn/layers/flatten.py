@@ -72,7 +72,7 @@ def flatten(context: Context, In: Output, Img: Cuboid, data_size, copy_count):
             coeff = coeff * In.size.h
             coeff = coeff + [0] * (data_size * copy_count - len(coeff))
             coeff = coeff * (context.number_of_slots // (data_size * copy_count))
-            coeff = coeff + (context.number_of_slots - len(coeff))
+            # coeff = coeff + [0] * (context.number_of_slots - len(coeff))
             
             num_rot = math.ceil(In.size.w / In.interval.w)
             for i in range(num_rot):

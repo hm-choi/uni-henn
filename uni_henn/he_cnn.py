@@ -133,17 +133,17 @@ class HE_CNN(torch.nn.Module):
         for layer_name, layer in self.model.named_children():
             layer_params = getattr(self.model, layer_name)
             
-            # if layer.__class__.__name__ == 'Conv2d':
-            #     Out, copy_count = conv2d_layer_converter_one_data(
-            #         self.context, Out, self.Img, layer_params, self.data_size, copy_count
-            #     )
+            if layer.__class__.__name__ == 'Conv2d':
+                Out, copy_count = conv2d_layer_converter_one_data(
+                    self.context, Out, self.Img, layer_params, self.data_size, copy_count
+                )
                 # if copy_count == 4:
                 # return Out.ciphertexts[0]
 
-            if layer.__class__.__name__ == 'Conv2d':
-                Out = conv2d_layer_converter_(
-                    self.context, Out, self.Img, layer_params, self.data_size
-                )
+            # if layer.__class__.__name__ == 'Conv2d':
+            #     Out = conv2d_layer_converter_(
+            #         self.context, Out, self.Img, layer_params, self.data_size
+            #     )
             #     if len(Out.ciphertexts) == 12:
             #         return Out.ciphertexts[0]
 
