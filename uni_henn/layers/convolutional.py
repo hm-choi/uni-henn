@@ -128,25 +128,20 @@ def conv2d_layer_converter_one_data(context: Context, In: Output, Img: Cuboid, l
         const = 1
     )
 
-    data_num = context.number_of_slots // data_size      # LeNet-1: 8 / 8  |  LeNet-5: 4 / 4
-    one_cipher_data = min(CH_in, data_num // copy_count) # LeNet-1: 1 / 4  |  LeNet-5: 1 / 4
-    req_copy_count = min(CH_out, data_num // CH_in)      # LeNet-1: 4 / 2  |  LeNet-5: 4 / 1
-    num_cipher = len(In.ciphertexts)                     # LeNet-1: 1 / 1  |  LeNet-5: 1 / 1
+    data_num = context.number_of_slots // data_size
+    one_cipher_data = min(CH_in, data_num // copy_count)
+    req_copy_count = min(CH_out, data_num // CH_in)
+    num_cipher = len(In.ciphertexts)
     block_count = 1
     if req_copy_count == 0:
         block_count = math.ceil(CH_in / data_num)
         req_copy_count = 1
-    print(data_num, one_cipher_data, req_copy_count, num_cipher, block_count, copy_count)
+    # print(data_num, one_cipher_data, req_copy_count, num_cipher, block_count, copy_count)
 
     # print(context.encoder.decode(context.decryptor.decrypt(In.ciphertexts[0])).tolist()[:10])
 
     for i in range(num_cipher):
         In.ciphertexts[i] = copy_ciphertext(context, In.ciphertexts[i], data_size * min(CH_in * copy_count, data_num), req_copy_count // copy_count)
-
-    # print(context.encoder.decode(context.decryptor.decrypt(In.ciphertexts[0])).tolist()[:5])
-    # print(context.encoder.decode(context.decryptor.decrypt(In.ciphertexts[0])).tolist()[1024:1029])
-    # print(context.encoder.decode(context.decryptor.decrypt(In.ciphertexts[0])).tolist()[:5])
-    # print(context.encoder.decode(context.decryptor.decrypt(In.ciphertexts[0])).tolist()[1024:1029])
     
     C_rot = []
 

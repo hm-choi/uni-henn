@@ -44,6 +44,8 @@ if __name__ == "__main__":
 
     result_plaintext = HE_m1.decrypt(result_ciphertext)
 
+    print(result_plaintext[1044:1064])
+
     for i in range(num_of_data):
         """Model result without homomorphic encryption"""
         origin_results = m1_model(data)[i].flatten().tolist()
