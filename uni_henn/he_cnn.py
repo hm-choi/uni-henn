@@ -53,6 +53,7 @@ class HE_CNN(torch.nn.Module):
                 _const = 1
 
             elif layer.__class__.__name__ == 'Flatten':
+                req_depth += 1
                 if Out.w != 1 or _const != 1:
                     req_depth += 1
                 if Out.h != 1:
@@ -171,7 +172,7 @@ class HE_CNN(torch.nn.Module):
             elif layer.__class__.__name__ == 'Flatten':
                 Out = flatten_one_data(self.context, Out, self.Img, self.data_size, copy_count)
                 # Out = flatten(self.context, Out, self.Img, self.data_size, copy_count)
-                return Out.ciphertexts[0]
+                # return Out.ciphertexts[0]
 
             elif layer.__class__.__name__ == 'Linear':
                 Out.ciphertexts[0] = fc_layer_converter(self.context, Out.ciphertexts[0], layer_params, self.data_size)

@@ -136,6 +136,7 @@ def conv2d_layer_converter_one_data(context: Context, In: Output, Img: Cuboid, l
     if req_copy_count == 0:
         block_count = math.ceil(CH_in / data_num)
         req_copy_count = 1
+        
     # print(data_num, one_cipher_data, req_copy_count, num_cipher, block_count, copy_count)
 
     # print(context.encoder.decode(context.decryptor.decrypt(In.ciphertexts[0])).tolist()[:10])

@@ -16,9 +16,11 @@ class Flatten(torch.nn.Module):
         return torch.flatten(x, 1)
 
 class M1(torch.nn.Module):
-    def __init__(self, hidden=64, output=10):
+    def __init__(self):
         super(M1, self).__init__()
-        self.Conv1 = torch.nn.Conv2d(in_channels=1, out_channels=8, kernel_size=4, stride=3, padding=0)
+        self.Conv1 = torch.nn.Conv2d(
+            in_channels=1, out_channels=8, 
+            kernel_size=4, stride=3, padding=0)
         self.Square1 = Square()
         self.Flatten = Flatten()
         self.FC1 = torch.nn.Linear(648, 64)
@@ -37,10 +39,14 @@ class M1(torch.nn.Module):
 class M2(torch.nn.Module):
     def __init__(self):
         super(M2, self).__init__()
-        self.Conv1 = torch.nn.Conv2d(in_channels=1, out_channels=4, kernel_size=5, stride=1, padding=0)
+        self.Conv1 = torch.nn.Conv2d(
+            in_channels=1, out_channels=4, 
+            kernel_size=5, stride=1, padding=0)
         self.Square1 = Square()
         self.AvgPool1 = torch.nn.AvgPool2d(kernel_size=2)
-        self.Conv2 = torch.nn.Conv2d(in_channels=4, out_channels=12, kernel_size=5, stride=1, padding=0)
+        self.Conv2 = torch.nn.Conv2d(
+            in_channels=4, out_channels=12, 
+            kernel_size=5, stride=1, padding=0)
         self.Square2 = Square()
         self.AvgPool2 = torch.nn.AvgPool2d(kernel_size=2)
         self.Flatten = Flatten()

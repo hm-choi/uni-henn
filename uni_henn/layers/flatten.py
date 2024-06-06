@@ -267,6 +267,13 @@ def flatten_one_data(context: Context, In: Output, Img: Cuboid, data_size, copy_
         ciphertext = context.evaluator.add(ciphertext, ciphertext_temp)        
         rot *= 2
 
+    masking = [1] * data_size
+    encoded_masking = context.encoder.encode(masking, context.scale)
+    context.evaluator.mod_switch_to_inplace(encoded_masking, ciphertext.parms_id()) 
+    ciphertext = context.evaluator.multiply_plain(ciphertext, encoded_masking)
+    context.evaluator.relinearize_inplace(ciphertext, context.relin_keys)
+    context.evaluator.rescale_to_next_inplace(ciphertext)
+
     Out = Output(
         ciphertexts = [ciphertext],
         size = Cuboid(1, 1, In.size.size3d()),

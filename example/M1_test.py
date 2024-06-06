@@ -5,6 +5,7 @@ from seal import *
 from torchvision import datasets
 import numpy as np
 import torch
+import time
 
 import sys, os
 
@@ -39,12 +40,21 @@ if __name__ == "__main__":
     ppData = preprocessing(np.array(data), MNIST_Img, num_of_data, HE_m1.data_size)
 
     ciphertext_list = HE_m1.encrypt(ppData)
+    
+    # for i in range(10):
+    #     START_TIME = time.time()
+        
+    #     # plain = [1] * 1000
+    #     # plaintext = context.encoder.encode(plain, context.scale)
+    #     # context.evaluator.mod_switch_to_inplace(plaintext, ciphertext_list[0].parms_id())
+    #     ciphertext = context.evaluator.rotate_vector(ciphertext_list[0], i+10, context.galois_key)
+        
+    #     END_TIME = time.time()
+    #     print("time:", i+10, END_TIME - START_TIME)
  
     result_ciphertext = HE_m1(ciphertext_list, _time=True)
 
     result_plaintext = HE_m1.decrypt(result_ciphertext)
-
-    print(result_plaintext[1044:1064])
 
     for i in range(num_of_data):
         """Model result without homomorphic encryption"""
