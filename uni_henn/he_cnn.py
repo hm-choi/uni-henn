@@ -131,6 +131,7 @@ class HE_CNN(torch.nn.Module):
             CHECK_TIME.append(time.time())
             print('Drop depth TIME\t %.3f sec' %(CHECK_TIME[_order] - START_TIME))
         
+        check_first_fc = True
         for layer_name, layer in self.model.named_children():
             layer_params = getattr(self.model, layer_name)
             
@@ -172,10 +173,14 @@ class HE_CNN(torch.nn.Module):
             elif layer.__class__.__name__ == 'Flatten':
                 Out = flatten_one_data(self.context, Out, self.Img, self.data_size, copy_count)
                 # Out = flatten(self.context, Out, self.Img, self.data_size, copy_count)
-                # return Out.ciphertexts[0]
 
             elif layer.__class__.__name__ == 'Linear':
-                Out.ciphertexts[0] = fc_layer_converter(self.context, Out.ciphertexts[0], layer_params, self.data_size)
+                if check_first_fc:
+                    Out.ciphertexts[0] = fc_layer_converter_one_data(self.context, Out.ciphertexts[0], layer_params, self.data_size)
+                    check_first_fc = False
+                else:
+                    Out.ciphertexts[0] = fc_layer_converter(self.context, Out.ciphertexts[0], layer_params, self.data_size)
+                # return Out.ciphertexts[0]
 
             if _time:
                 CHECK_TIME.append(time.time())

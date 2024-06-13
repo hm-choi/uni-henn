@@ -8,6 +8,7 @@ import torch
 import time
 
 import sys, os
+import csv
 
 if __name__ == "__main__":
     root_dir = os.path.dirname(os.path.abspath(__file__))
@@ -53,6 +54,14 @@ if __name__ == "__main__":
     #     print("time:", i+10, END_TIME - START_TIME)
  
     result_ciphertext = HE_m1(ciphertext_list, _time=True)
+    
+    result = context.encoder.decode(context.decryptor.decrypt(result_ciphertext))
+    csv_file_path = os.path.join(root_dir, 'result.csv')
+    with open(csv_file_path, 'w', newline='') as output_file:
+        csv_writer = csv.writer(output_file)
+        csv_writer.writerow(['Result'])  # Assuming result is a 1D list, change this if it's not
+        for item in result:
+            csv_writer.writerow([item])
 
     result_plaintext = HE_m1.decrypt(result_ciphertext)
 

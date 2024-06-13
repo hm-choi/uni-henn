@@ -28,6 +28,8 @@ def re_depth(context: Context, C_in: list, count):
 def copy_ciphertext(context: Context, ciphertext, data_size, count):
     if data_size & (data_size - 1) != 0:
         raise ValueError("The data size must be a power of 2.")
+    if count & (count - 1) != 0:
+        raise ValueError("The count must be a power of 2.")
 
     idx = 1
     while idx < count:

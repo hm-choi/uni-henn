@@ -4,6 +4,7 @@ import numpy as np
 
 from uni_henn.utils.context import Context
 from uni_henn.utils.structure import Output, Cuboid, Rectangle
+from uni_henn.utils.functional import copy_ciphertext
 
 def flatten(context: Context, In: Output, Img: Cuboid, data_size):
     """
@@ -273,6 +274,8 @@ def flatten_one_data(context: Context, In: Output, Img: Cuboid, data_size, copy_
     ciphertext = context.evaluator.multiply_plain(ciphertext, encoded_masking)
     context.evaluator.relinearize_inplace(ciphertext, context.relin_keys)
     context.evaluator.rescale_to_next_inplace(ciphertext)
+
+    # ciphertext = copy_ciphertext(context, ciphertext, data_size, context.number_of_slots // data_size)
 
     Out = Output(
         ciphertexts = [ciphertext],
