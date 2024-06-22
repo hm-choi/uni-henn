@@ -56,12 +56,12 @@ if __name__ == "__main__":
     result_ciphertext = HE_m1(ciphertext_list, _time=True)
     
     result = context.encoder.decode(context.decryptor.decrypt(result_ciphertext))
-    csv_file_path = os.path.join(root_dir, 'result.csv')
-    with open(csv_file_path, 'w', newline='') as output_file:
-        csv_writer = csv.writer(output_file)
-        csv_writer.writerow(['Result'])  # Assuming result is a 1D list, change this if it's not
-        for item in result:
-            csv_writer.writerow([item])
+    # csv_file_path = os.path.join(root_dir, 'result.csv')
+    # with open(csv_file_path, 'w', newline='') as output_file:
+    #     csv_writer = csv.writer(output_file)
+    #     csv_writer.writerow(['Result'])  # Assuming result is a 1D list, change this if it's not
+    #     for item in result:
+    #         csv_writer.writerow([item])
 
     result_plaintext = HE_m1.decrypt(result_ciphertext)
 
@@ -86,4 +86,4 @@ if __name__ == "__main__":
         """
         After calculating the sum of errors between the results of the original model and the model with homomorphic encryption applied, Outputting whether it matches the original results.
         """        
-        print('%sth result Error: %.8f\t| Result is %s' %(str(i+1), sum, "Correct" if origin_result == he_result else "Wrong"))
+        # print('%sth result Error: %.8f\t| Result is %s' %(str(i+1), sum, "Correct" if origin_result == he_result else "Wrong"))

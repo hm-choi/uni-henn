@@ -34,4 +34,5 @@ if __name__ == "__main__":
         test_code = test_file.read()
 
     sys.argv = [test_filename, context]
-    exec(test_code)
+    for _ in range(30):
+        exec(test_code)
