@@ -8,8 +8,8 @@ if __name__ == "__main__":
         raise ValueError("Please input only one argv.")
 
     file_type = int(sys.argv[1])
-    if file_type < 1 or file_type > 6:
-        raise ValueError("Incorrect file type. Please input between 1 and 6.")
+    if file_type < 1 or file_type > 7:
+        raise ValueError("Incorrect file type. Please input between 1 and 7.")
 
     """
     When creating a context, you can adjust several parameters.
@@ -27,7 +27,8 @@ if __name__ == "__main__":
              'example/M3_test.py',
              'example/M4_test.py',
              'example/M5_test.py',
-             'example/M6_test.py']
+             'example/M6_test.py',
+             'example/M7_test.py']
     
     test_filename = files[file_type - 1]
     with open(test_filename) as test_file:

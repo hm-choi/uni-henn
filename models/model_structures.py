@@ -152,6 +152,28 @@ class M5(torch.nn.Module):
 class M6(torch.nn.Module):
     def __init__(self):
         super(M6, self).__init__()
+        # L1 Image shape=(?, 16, 16, 1)
+        #    Conv     -> (?, 14, 14, 6)
+        #    Pool     -> (?, 7, 7, 6)
+        self.Conv1 = torch.nn.Conv2d(in_channels=1, out_channels=6, kernel_size=4, stride=2, padding=0)
+        self.Square1 = Square()
+        self.Flatten = Flatten()
+        self.FC1 = torch.nn.Linear(294, 64)
+        self.Square2 = Square()
+        self.FC2 = torch.nn.Linear(64, 10)
+
+    def forward(self, x):
+        out = self.Conv1(x)
+        out = self.Square1(out)
+        out = self.Flatten(out)
+        out = self.FC1(out)
+        out = self.Square2(out)
+        out = self.FC2(out)
+        return out
+    
+class M7(torch.nn.Module):
+    def __init__(self):
+        super(M7, self).__init__()
         self.Conv1 = torch.nn.Conv1d(in_channels=1, out_channels=2, kernel_size=2, stride=2, padding=0)
         self.Square1 = Square()        
         self.Conv2 = torch.nn.Conv1d(in_channels=2, out_channels=4, kernel_size=2, stride=2, padding=0)
@@ -159,7 +181,7 @@ class M6(torch.nn.Module):
         self.FC1 = torch.nn.Linear(128, 32)
         self.Square2 = Square()
         self.FC2 = torch.nn.Linear(32, 5)
-
+        
     def forward(self, x):
         out = self.Conv1(x)
         out = self.Square1(out)

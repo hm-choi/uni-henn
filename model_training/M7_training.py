@@ -5,7 +5,7 @@ test_name = 'test_ecg.hdf5'
 all_name = 'all_ecg.hdf5'
 
 model_dir = '../models'
-model_name = 'M6'
+model_name = 'M7'
 model_ext = '.pth'
 
 csv_dir = 'csv'
@@ -21,7 +21,7 @@ current_dir = os.getcwd()
 project_root = os.path.abspath(os.path.join(current_dir, ".."))
 sys.path.insert(0, project_root)
 
-from models.model_structures import M6
+from models.model_structures import M7
 
 import torch
 import torch.nn as nn
@@ -146,7 +146,7 @@ for i in range(run):
     torch.backends.cudnn.benchmark = False
     torch.backends.cudnn.deterministic = True
     
-    ecgnet = M6()  # init new model
+    ecgnet = M7()  # init new model
     # torch.save(ecgnet.state_dict(), 'init_weight.pth')  # save init weights
     train_losses, train_accs, test_losses, test_accs = train(i, ecgnet.to(device))  # train
 
