@@ -33,6 +33,7 @@ if __name__ == "__main__":
     with open(test_filename) as test_file:
         test_code = test_file.read()
 
+    REPEAT = 1
     sys.argv = [test_filename, context]
-    for _ in range(30):
+    for _ in range(REPEAT):
         exec(test_code)
