@@ -10,7 +10,7 @@ Hyunmin Choi<sup>1,2</sup>, Jihun Kim<sup>2</sup>, Seungho Kim<sup>2</sup>, Seon
 
 ** Corresponding author
 
-You can read the paper here: [ArXiv Link](https://arxiv.org/abs/2402.03060)
+You can read the paper here: [ArXiv Link](https://arxiv.org/abs/2402.03060) [IEEE ACCESS](https://ieeexplore.ieee.org/document/10623483)
 
 ## Designing Faster and More Versatile Homomorpic Encryption-based CNNs
 UniHENN is a Python package that provides Homomorphic Encryption(HE)-based CNN inference. 
@@ -79,6 +79,7 @@ We conducted seven experiments to test the performance of UniHENN with various m
 |M6|1D CNN|ECG Dataset|7|M6_test.py|
 
 ## Contributing
+- Ownership: Hyunmin Choi
 - Architecture Designer: Hyunmin Choi(https://github.com/hm-choi)
 - Main Contributor: Jihun Kim (https://github.com/JihunSKKU), Hyunmin Choi(https://github.com/hm-choi)
 - Contributor: Seungho Kim (https://github.com/Seungho-Kim-SKKU)
@@ -86,7 +87,17 @@ We conducted seven experiments to test the performance of UniHENN with various m
 - Register issues and pull requests are welcome. If there are some errors or changes then please open an issue and write down the details. 
 
 ## Publications
-TBD
+UniHENN: Designing Faster and More Versatile Homomorphic Encryption-based CNNs without im2col. (IEEE ACCESS, 2024)
 
+## Citations
+```
+@article{choi2024unihenn,
+  title={UniHENN: Designing Faster and More Versatile Homomorphic Encryption-based CNNs without im2col},
+  author={Choi, Hyunmin and Kim, Jihun and Kim, Seungho and Park, Seonhye and Park, Jeongyong and Choi, Wonbin and Kim, Hyoungshick},
+  journal={IEEE Access},
+  year={2024},
+  publisher={IEEE}
+}
+```
 ## License
-TBD
+This is available for the non-commercial purpose only. 
